@@ -1,0 +1,73 @@
+group 'com.ymatou.mq'
+version '1.0.0.20170208'
+
+apply plugin: 'java'
+apply plugin: "idea"
+apply plugin: "maven"
+apply plugin: "eclipse-wtp"
+
+repositories {
+        mavenLocal()
+        maven { url "http://172.16.100.98/nexus/content/groups/public/"}
+        maven { url "http://repo.spring.io/release" }
+        maven { url "http://repo.spring.io/milestone" }
+        maven { url "http://repo.spring.io/snapshot" }
+        maven { url "http://repository.jboss.org/nexus/content/groups/public/" }
+        mavenCentral()
+}
+
+compileJava {
+	sourceCompatibility = 1.8
+	targetCompatibility = 1.8
+	options.encoding = 'UTF-8'
+}
+
+compileTestJava {
+	sourceCompatibility = 1.8
+	targetCompatibility = 1.8
+	options.encoding = 'UTF-8'
+}
+
+ext {
+    rabbitMqDriverVersion = "4.1.0"
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+
+
+    compile "com.rabbitmq:amqp-client:${rabbitMqDriverVersion}"
+}
+
+//上传到nexus
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: "http://172.16.100.98/nexus/content/repositories/releases")
+                    { authentication(userName: "admin", password: "admin123") }
+            snapshotRepository(url: "http://172.16.100.98/nexus/content/repositories/snapshots")
+                    { authentication(userName: "admin", password: "admin123") }
+            pom.version = "$project.version"
+            pom.artifactId = "mq-rabbit-common"
+            pom.groupId = "$project.group"
+        }
+    }
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+artifacts {
+    archives jar
+    archives sourcesJar
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+
+task wrapper(type: Wrapper) {
+    gradleVersion = "2.4"
+}
