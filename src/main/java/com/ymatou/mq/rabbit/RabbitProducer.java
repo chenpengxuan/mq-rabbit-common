@@ -146,7 +146,6 @@ public class RabbitProducer {
      * @param msgId @throws IOException
      */
     public void publish(String body, String clientMsgId, String msgId) throws IOException {
-        //若因通道连接发布失败，则切换集群连接重试
         try {
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                     .messageId(clientMsgId).correlationId(msgId)
@@ -155,13 +154,20 @@ public class RabbitProducer {
             //import org.apache.commons.lang.SerializationUtils;
             //TODO convert string to bytes
             byte[] bd = null;
+            if(masterChannel == null){
+                //TODO 处理可能为空的情况
+            }
             masterChannel.basicPublish(exchange, routingKey, basicProps, bd);
         } catch (IOException e) {
+            //若因通道连接发布失败，则切换集群连接重试
             logger.error("publish master msg error,msgId:{},msgUuid:{}", clientMsgId, msgId,e);
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                     .messageId(clientMsgId).correlationId(msgId)
                     .type(CLUSTER_SLAVE)
                     .build();
+            if(slaveChannel == null){
+                //TODO 处理可能为空的情况
+            }
             slaveChannel.basicPublish(exchange, routingKey, basicProps, null);
         }
     }
