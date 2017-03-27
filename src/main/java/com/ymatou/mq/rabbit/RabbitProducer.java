@@ -2,6 +2,7 @@ package com.ymatou.mq.rabbit;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.Connection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,11 @@ public class RabbitProducer {
     private static final String CLUSTER_SLAVE = "slave";
 
     /**
+     * 默认一个连接创建通道数目
+     */
+    private static final int CHANNEL_NUMBER = 10;
+
+    /**
      * master通道
      */
     private Channel masterChannel;
@@ -57,15 +63,16 @@ public class RabbitProducer {
     private Channel slaveChannel;
 
     /**
-     * 默认一个连接创建通道数目
+     * rabbit ack事件监听
      */
-    private static final int CHANNEL_NUMBER = 10;
+    private ConfirmListener confirmListener;
 
-    public RabbitProducer(String appId,String bizCode){
+    public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener){
         this.exchange = appId;
         this.routingKey = bizCode;
         //TODO 确认
         this.queue = bizCode;
+        this.confirmListener = confirmListener;
         //初始化创建channel
         this.initChannel();
     }
@@ -105,6 +112,9 @@ public class RabbitProducer {
             channel.queueDeclare(queue, true, false, false, null);
             channel.queueBind(queue, exchange, queue);
             channel.basicQos(1);
+            if(channel != null){
+                channel.addConfirmListener(this.confirmListener);
+            }
             return channel;
         } catch (Exception e) {
             throw new RuntimeException("create rabbit channel failed.",e);
