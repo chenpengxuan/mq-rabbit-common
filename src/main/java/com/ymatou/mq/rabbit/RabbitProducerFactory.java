@@ -22,15 +22,15 @@ public class RabbitProducerFactory {
     /**
      * create rabbit生产者
      * @param appId
-     * @param bizCode
+     * @param queueCode
      * @return
      */
-    public static RabbitProducer createRabbitProducer(String appId,String bizCode){
-        String key = String.format("%s_%s",appId,bizCode);
+    public static RabbitProducer createRabbitProducer(String appId,String queueCode){
+        String key = String.format("%s_%s",appId, queueCode);
         if(producerMapping.get(key) != null){
             return producerMapping.get(key);
         }else{
-            RabbitProducer producer = new RabbitProducer(appId,bizCode);
+            RabbitProducer producer = new RabbitProducer(appId, queueCode);
             producerMapping.put(key,producer);
             return producer;
         }

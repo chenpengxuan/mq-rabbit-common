@@ -3,7 +3,6 @@ package com.ymatou.mq.rabbit;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,11 +21,6 @@ public class RabbitProducer {
     private static final Logger logger = LoggerFactory.getLogger(RabbitProducer.class);
 
     /**
-     * 通道
-     */
-    private Channel channel;
-
-    /**
      * 交换器名称
      */
     private String exchange = null;
@@ -42,9 +36,29 @@ public class RabbitProducer {
     private String queue = null;
 
     /**
-     * 连接属性
+     * 当前rabbit集群，默认master
      */
-    private AMQP.BasicProperties props = null;
+    private String cluster = CLUSTER_MASTER;
+
+    /**
+     * rabbit集群-master
+     */
+    private static final String CLUSTER_MASTER = "master";
+
+    /**
+     * rabbit集群-slave
+     */
+    private static final String CLUSTER_SLAVE = "slave";
+
+    /**
+     * master通道
+     */
+    private Channel masterChannel;
+
+    /**
+     * slave通道
+     */
+    private Channel slaveChannel;
 
     /**
      * 默认一个连接创建通道数目
@@ -54,36 +68,69 @@ public class RabbitProducer {
     public RabbitProducer(String appId,String bizCode){
         this.exchange = appId;
         this.routingKey = bizCode;
-        this.queue = queue;
-        //TODO props init
-        this.init();
-    }
-
-    /**
-     * 初始化conn/channel相关
-     */
-    void init(){
-        try {
-            //初始化时创建conn/channel
-            Connection conn = RabbitConnectionFactory.createConnection();
-            this.channel = this.createChannel(conn);
-        } catch (Exception e) {
-            throw new RuntimeException("init conn/channel error.",e);
-        }
+        //TODO 确认
+        this.queue = bizCode;
+        //初始化创建channel
+        this.initChannel();
     }
 
     /**
      * 创建通道
-     * @param connection
+     */
+    void initChannel(){
+        try {
+            //通过master集群创建
+            this.masterChannel = this.createChannel(CLUSTER_MASTER);
+            this.cluster = CLUSTER_MASTER;
+        } catch (Exception e) {
+            logger.error("create master conn failed,try slave...",e);
+            try {
+                //若master不可用，则通过slave创建
+                this.slaveChannel = this.createChannel(CLUSTER_SLAVE);
+                this.cluster = CLUSTER_SLAVE;
+            } catch (Exception ex) {
+                logger.error("create slave conn failed.",e);
+                throw new RuntimeException("create rabbit conn failed");
+            }
+        }
+    }
+
+    /**
+     * 创建生产通道
      * @return
      */
-    Channel createChannel(Connection connection) throws IOException {
-        Channel channel = connection.createChannel(CHANNEL_NUMBER);
-        channel.exchangeDeclare(exchange, "direct", true);
-        channel.queueDeclare(queue, true, false, false, null);
-        channel.queueBind(queue, exchange, queue);
-        channel.basicQos(1);
-        return channel;
+    Channel createChannel(String cluster){
+        try {
+            //创建conn
+            Connection conn = this.createConnection(cluster);
+            //创建channel
+            Channel channel = conn.createChannel(CHANNEL_NUMBER);
+            channel.exchangeDeclare(exchange, "direct", true);
+            channel.queueDeclare(queue, true, false, false, null);
+            channel.queueBind(queue, exchange, queue);
+            channel.basicQos(1);
+            return channel;
+        } catch (Exception e) {
+            throw new RuntimeException("create rabbit channel failed.",e);
+        }
+    }
+
+    /**
+     * 创建conn
+     * @return
+     */
+    Connection createConnection(String cluster){
+        //创建conn
+        Connection conn = null;
+        try {
+            conn = RabbitConnectionFactory.createConnection(cluster);
+        } catch (Exception e) {
+            throw new RuntimeException("create rabbit conn failed:" + e);
+        }
+        if(conn == null){
+            throw new RuntimeException("create rabbit conn failed.");
+        }
+        return conn;
     }
 
     /**
@@ -91,9 +138,23 @@ public class RabbitProducer {
      * @param
      * @throws IOException
      */
-    public void publish(byte[] body) throws IOException {
-        //TODO 调用时或心跳检测时，根据可用状态切换conn/channel
+    public void publish(byte[] body,String msgId,String msgUuid) throws IOException {
+        //import org.apache.commons.lang.SerializationUtils;
         //TODO convert string to bytes
-        channel.basicPublish(exchange, routingKey, props, body);
+        //若因通道连接发布失败，则切换集群连接重试
+        try {
+            AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
+                    .messageId(msgId).correlationId(msgUuid)
+                    .type(CLUSTER_MASTER)
+                    .build();
+            masterChannel.basicPublish(exchange, routingKey, basicProps, body);
+        } catch (IOException e) {
+            logger.error("publish master msg error,msgId:{},msgUuid:{}",msgId,msgUuid,e);
+            AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
+                    .messageId(msgId).correlationId(msgUuid)
+                    .type(CLUSTER_SLAVE)
+                    .build();
+            slaveChannel.basicPublish(exchange, routingKey, basicProps, body);
+        }
     }
 }
