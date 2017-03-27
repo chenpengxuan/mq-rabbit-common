@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Properties;
 
 /**
  * rabbit生产者
@@ -67,34 +68,35 @@ public class RabbitProducer {
      */
     private ConfirmListener confirmListener;
 
-    public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener){
+    /**
+     * rabbit配置信息
+     */
+    private Properties props;
+
+    public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener,Properties props){
         this.exchange = appId;
         this.routingKey = bizCode;
         //TODO 确认
         this.queue = bizCode;
         this.confirmListener = confirmListener;
+        this.props = props;
         //初始化创建channel
-        this.initChannel();
+        this.initChannel(props);
     }
 
     /**
      * 创建通道
      */
-    void initChannel(){
+    void initChannel(Properties props){
         try {
-            //通过master集群创建
-            this.masterChannel = this.createChannel(CLUSTER_MASTER);
-            this.cluster = CLUSTER_MASTER;
-        } catch (Exception e) {
-            logger.error("create master conn failed,try slave...",e);
-            try {
-                //若master不可用，则通过slave创建
-                this.slaveChannel = this.createChannel(CLUSTER_SLAVE);
-                this.cluster = CLUSTER_SLAVE;
-            } catch (Exception ex) {
-                logger.error("create slave conn failed.",e);
-                throw new RuntimeException("create rabbit conn failed");
+            if(this.isMasterEnable(props)){
+                this.masterChannel = this.createChannel(CLUSTER_MASTER);
             }
+            if(this.isSlaveEnable(props)){
+                this.slaveChannel = this.createChannel(CLUSTER_SLAVE);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("create rabbit conn failed",e);
         }
     }
 
@@ -129,7 +131,7 @@ public class RabbitProducer {
         //创建conn
         Connection conn = null;
         try {
-            conn = RabbitConnectionFactory.createConnection(cluster);
+            conn = RabbitConnectionFactory.createConnection(cluster,props);
         } catch (Exception e) {
             throw new RuntimeException("create rabbit conn failed:" + e);
         }
@@ -144,31 +146,84 @@ public class RabbitProducer {
      * @param
      * @param clientMsgId
      * @param msgId @throws IOException
+     * @param props
      */
-    public void publish(String body, String clientMsgId, String msgId) throws IOException {
+    public void publish(String body, String clientMsgId, String msgId, Properties props) throws IOException {
         try {
-            AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
-                    .messageId(clientMsgId).correlationId(msgId)
-                    .type(CLUSTER_MASTER)
-                    .build();
-            //import org.apache.commons.lang.SerializationUtils;
-            //TODO convert string to bytes
-            byte[] bd = null;
-            if(masterChannel == null){
-                //TODO 处理可能为空的情况
+            //若master/slave都没有开启
+            if(!this.isMasterEnable(props) && !this.isSlaveEnable(props)){
+                throw new RuntimeException("master and slave not enable.");
             }
-            masterChannel.basicPublish(exchange, routingKey, basicProps, bd);
+
+            if(this.isMasterEnable(props)){//若master开启
+
+                AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
+                        .messageId(clientMsgId).correlationId(msgId)
+                        .type(CLUSTER_MASTER)
+                        .build();
+                this.cluster = CLUSTER_MASTER;
+                //import org.apache.commons.lang.SerializationUtils;
+                //TODO convert string to bytes
+                byte[] bd = null;
+                this.getMasterChannel().basicPublish(exchange, routingKey, basicProps, bd);
+            }else if(this.isSlaveEnable(props)){//若slave开启
+                AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
+                        .messageId(clientMsgId).correlationId(msgId)
+                        .type(CLUSTER_SLAVE)
+                        .build();
+                this.cluster = CLUSTER_SLAVE;
+                this.getSlaveChannel().basicPublish(exchange, routingKey, basicProps, null);
+            }
         } catch (IOException e) {
-            //若因通道连接发布失败，则切换集群连接重试
-            logger.error("publish master msg error,msgId:{},msgUuid:{}", clientMsgId, msgId,e);
-            AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
-                    .messageId(clientMsgId).correlationId(msgId)
-                    .type(CLUSTER_SLAVE)
-                    .build();
-            if(slaveChannel == null){
-                //TODO 处理可能为空的情况
-            }
-            slaveChannel.basicPublish(exchange, routingKey, basicProps, null);
+            logger.error("publish msg error with cluster:{},msgId:{},msgUuid:{}", cluster,clientMsgId, msgId,e);
         }
+    }
+
+    /**
+     * 获取master channel
+     * @return
+     */
+    public Channel getMasterChannel() {
+        if(masterChannel == null){
+            masterChannel = this.createChannel(CLUSTER_MASTER);
+            if(masterChannel == null){
+                throw new RuntimeException("create master channel fail.");
+            }
+        }
+        return masterChannel;
+    }
+
+    /**
+     * 获取slave channel
+     * @return
+     */
+    public Channel getSlaveChannel() {
+        if(slaveChannel == null){
+            slaveChannel = this.createChannel(CLUSTER_SLAVE);
+            if(slaveChannel == null){
+                throw new RuntimeException("create slave channel fail.");
+            }
+        }
+        return slaveChannel;
+    }
+
+    /**
+     * 判断master是否开启
+     * @param props
+     * @return
+     */
+    boolean isMasterEnable(Properties props){
+        //TODO
+        return true;
+    }
+
+    /**
+     * 判断slave是否开启
+     * @param props
+     * @return
+     */
+    boolean isSlaveEnable(Properties props){
+        //TODO
+        return true;
     }
 }

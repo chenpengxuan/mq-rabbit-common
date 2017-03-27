@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -26,12 +27,12 @@ public class RabbitProducerFactory {
      * @param queueCode
      * @return
      */
-    public static RabbitProducer createRabbitProducer(String appId,String queueCode,ConfirmListener confirmListener){
+    public static RabbitProducer createRabbitProducer(String appId, String queueCode, ConfirmListener confirmListener, Properties props){
         String key = String.format("%s_%s",appId, queueCode);
         if(producerMapping.get(key) != null){
             return producerMapping.get(key);
         }else{
-            RabbitProducer producer = new RabbitProducer(appId, queueCode,confirmListener);
+            RabbitProducer producer = new RabbitProducer(appId, queueCode,confirmListener,props);
             producerMapping.put(key,producer);
             return producer;
         }

@@ -8,6 +8,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 
@@ -32,9 +33,9 @@ public class RabbitConnectionFactory {
      * @return
      * @param cluster 集群名称 master/slave
      */
-    public static Connection createConnection(String cluster) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+    public static Connection createConnection(String cluster, Properties props) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         //获取连接工厂
-        ConnectionFactory connectionFactory = getConnectionFactory(cluster);
+        ConnectionFactory connectionFactory = getConnectionFactory(cluster,props);
         return connectionFactory.newConnection();
     }
 
@@ -42,12 +43,14 @@ public class RabbitConnectionFactory {
      * 根据集群名称创建连接工厂
      * @param cluster
      */
-    static ConnectionFactory getConnectionFactory(String cluster) throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+    static ConnectionFactory getConnectionFactory(String cluster,Properties props) throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         if(connFactoryMapping.get(cluster) != null){
             return connFactoryMapping.get(cluster);
         }else{
             ConnectionFactory factory = new ConnectionFactory();
-            factory.setUri(getUrl(cluster));
+            String url = getUrl(cluster,props);
+            //TODO valid url
+            factory.setUri(url);
             factory.setAutomaticRecoveryEnabled(true);
             //TODO 心跳检测 ScheduledExecutorService
             //factory.setHeartbeatExecutor(null);
@@ -60,8 +63,9 @@ public class RabbitConnectionFactory {
      * @param cluster
      * @return
      */
-    static String getUrl(String cluster){
+    static String getUrl(String cluster,Properties props){
         if("master".equalsIgnoreCase(cluster)){
+            //TODO 通过props获取url
             return masterUrl;
         }else{
             return slaveUrl;
