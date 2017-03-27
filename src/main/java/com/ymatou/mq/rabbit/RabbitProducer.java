@@ -7,10 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.TimeoutException;
 
 /**
  * rabbit生产者
@@ -136,25 +132,27 @@ public class RabbitProducer {
     /**
      * 发布消息
      * @param
-     * @throws IOException
+     * @param clientMsgId
+     * @param msgId @throws IOException
      */
-    public void publish(byte[] body,String msgId,String msgUuid) throws IOException {
-        //import org.apache.commons.lang.SerializationUtils;
-        //TODO convert string to bytes
+    public void publish(String body, String clientMsgId, String msgId) throws IOException {
         //若因通道连接发布失败，则切换集群连接重试
         try {
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
-                    .messageId(msgId).correlationId(msgUuid)
+                    .messageId(clientMsgId).correlationId(msgId)
                     .type(CLUSTER_MASTER)
                     .build();
-            masterChannel.basicPublish(exchange, routingKey, basicProps, body);
+            //import org.apache.commons.lang.SerializationUtils;
+            //TODO convert string to bytes
+            byte[] bd = null;
+            masterChannel.basicPublish(exchange, routingKey, basicProps, bd);
         } catch (IOException e) {
-            logger.error("publish master msg error,msgId:{},msgUuid:{}",msgId,msgUuid,e);
+            logger.error("publish master msg error,msgId:{},msgUuid:{}", clientMsgId, msgId,e);
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
-                    .messageId(msgId).correlationId(msgUuid)
+                    .messageId(clientMsgId).correlationId(msgId)
                     .type(CLUSTER_SLAVE)
                     .build();
-            slaveChannel.basicPublish(exchange, routingKey, basicProps, body);
+            slaveChannel.basicPublish(exchange, routingKey, basicProps, null);
         }
     }
 }
