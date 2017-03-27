@@ -1,5 +1,6 @@
 package com.ymatou.mq.rabbit;
 
+import com.rabbitmq.client.ConfirmListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,12 +26,12 @@ public class RabbitProducerFactory {
      * @param queueCode
      * @return
      */
-    public static RabbitProducer createRabbitProducer(String appId,String queueCode){
+    public static RabbitProducer createRabbitProducer(String appId,String queueCode,ConfirmListener confirmListener){
         String key = String.format("%s_%s",appId, queueCode);
         if(producerMapping.get(key) != null){
             return producerMapping.get(key);
         }else{
-            RabbitProducer producer = new RabbitProducer(appId, queueCode);
+            RabbitProducer producer = new RabbitProducer(appId, queueCode,confirmListener);
             producerMapping.put(key,producer);
             return producer;
         }
