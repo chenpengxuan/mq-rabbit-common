@@ -22,16 +22,6 @@ public class RabbitProducer {
     private static final Logger logger = LoggerFactory.getLogger(RabbitProducer.class);
 
     /**
-     * 连接工厂
-     */
-    private ConnectionFactory connectionFactory;
-
-    /**
-     * 连接
-     */
-    private Connection connection;
-
-    /**
      * 通道
      */
     private Channel channel;
@@ -47,6 +37,11 @@ public class RabbitProducer {
     private String routingKey = null;
 
     /**
+     * 队列名称
+     */
+    private String queue = null;
+
+    /**
      * 连接属性
      */
     private AMQP.BasicProperties props = null;
@@ -59,6 +54,7 @@ public class RabbitProducer {
     public RabbitProducer(String appId,String bizCode){
         this.exchange = appId;
         this.routingKey = bizCode;
+        this.queue = queue;
         //TODO props init
         this.init();
     }
@@ -68,35 +64,12 @@ public class RabbitProducer {
      */
     void init(){
         try {
-            //TODO 梳理appId/bizCode与url/address之间的关系
-            //TODO 梳理connFactory/connection/channel之间关系
-            ConnectionFactory connectionFactory = this.createConnectionFactory(null);
-            Connection conn = this.createConnection(connectionFactory);
-            Channel channel = this.createChannel(conn);
+            //初始化时创建conn/channel
+            Connection conn = RabbitConnectionFactory.createConnection();
+            this.channel = this.createChannel(conn);
         } catch (Exception e) {
             throw new RuntimeException("init conn/channel error.",e);
         }
-    }
-
-    /**
-     * 根据uri创建连接工厂
-     * @param uri
-     */
-    ConnectionFactory createConnectionFactory(String uri) throws NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
-        ConnectionFactory factory = new ConnectionFactory();
-        factory.setUri(uri);
-        factory.setAutomaticRecoveryEnabled(true);
-        //TODO 心跳检测 ScheduledExecutorService
-        factory.setHeartbeatExecutor(null);
-        return factory;
-    }
-
-    /**
-     * 创建连接
-     * @return
-     */
-    Connection createConnection(ConnectionFactory connectionFactory) throws IOException, TimeoutException {
-        return connectionFactory.newConnection();
     }
 
     /**
@@ -105,7 +78,12 @@ public class RabbitProducer {
      * @return
      */
     Channel createChannel(Connection connection) throws IOException {
-        return connection.createChannel(CHANNEL_NUMBER);
+        Channel channel = connection.createChannel(CHANNEL_NUMBER);
+        channel.exchangeDeclare(exchange, "direct", true);
+        channel.queueDeclare(queue, true, false, false, null);
+        channel.queueBind(queue, exchange, queue);
+        channel.basicQos(1);
+        return channel;
     }
 
     /**
@@ -114,6 +92,7 @@ public class RabbitProducer {
      * @throws IOException
      */
     public void publish(byte[] body) throws IOException {
+        //TODO 调用时或心跳检测时，根据可用状态切换conn/channel
         //TODO convert string to bytes
         channel.basicPublish(exchange, routingKey, props, body);
     }
