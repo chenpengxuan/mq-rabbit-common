@@ -4,6 +4,8 @@ import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.Connection;
+import com.ymatou.mq.rabbit.config.RabbitConfig;
+import com.ymatou.mq.rabbit.support.RabbitConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,17 +38,7 @@ public class RabbitProducer {
     /**
      * 当前rabbit集群，默认master
      */
-    private String cluster = CLUSTER_MASTER;
-
-    /**
-     * rabbit集群-master
-     */
-    private static final String CLUSTER_MASTER = "master";
-
-    /**
-     * rabbit集群-slave
-     */
-    private static final String CLUSTER_SLAVE = "slave";
+    private String cluster = RabbitConstants.CLUSTER_MASTER;
 
     /**
      * 默认一个连接创建通道数目
@@ -71,29 +63,29 @@ public class RabbitProducer {
     /**
      * rabbit配置信息
      */
-    private Properties props;
+    private RabbitConfig rabbitConfig;
 
-    public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener,Properties props){
+    public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener, RabbitConfig rabbitConfig){
         this.exchange = appId;
         this.routingKey = bizCode;
         //TODO 确认
         this.queue = bizCode;
         this.confirmListener = confirmListener;
-        this.props = props;
-        //初始化创建channel
-        this.initChannel(props);
+        this.rabbitConfig = rabbitConfig;
+        //初始化channel相关
+        this.init();
     }
 
     /**
-     * 创建通道
+     * 初始化channel相关
      */
-    void initChannel(Properties props){
+    void init(){
         try {
-            if(this.isMasterEnable(props)){
-                this.masterChannel = this.createChannel(CLUSTER_MASTER);
+            if(this.isMasterEnable(this.rabbitConfig)){
+                this.masterChannel = this.createChannel(RabbitConstants.CLUSTER_MASTER);
             }
-            if(this.isSlaveEnable(props)){
-                this.slaveChannel = this.createChannel(CLUSTER_SLAVE);
+            if(this.isSlaveEnable(this.rabbitConfig)){
+                this.slaveChannel = this.createChannel(RabbitConstants.CLUSTER_SLAVE);
             }
         } catch (Exception e) {
             throw new RuntimeException("create rabbit conn failed",e);
@@ -131,7 +123,7 @@ public class RabbitProducer {
         //创建conn
         Connection conn = null;
         try {
-            conn = RabbitConnectionFactory.createConnection(cluster,props);
+            conn = RabbitConnectionFactory.createConnection(cluster,this.rabbitConfig);
         } catch (Exception e) {
             throw new RuntimeException("create rabbit conn failed:" + e);
         }
@@ -143,39 +135,33 @@ public class RabbitProducer {
 
     /**
      * 发布消息
-     * @param
+     * @param body
      * @param clientMsgId
-     * @param msgId @throws IOException
-     * @param props
+     * @param msgId
+     * @param rabbitConfig
+     * @throws IOException
      */
-    public void publish(String body, String clientMsgId, String msgId, Properties props) throws IOException {
-        try {
-            //若master/slave都没有开启
-            if(!this.isMasterEnable(props) && !this.isSlaveEnable(props)){
-                throw new RuntimeException("master and slave not enable.");
-            }
-
-            if(this.isMasterEnable(props)){//若master开启
-
-                AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
-                        .messageId(clientMsgId).correlationId(msgId)
-                        .type(CLUSTER_MASTER)
-                        .build();
-                this.cluster = CLUSTER_MASTER;
-                //import org.apache.commons.lang.SerializationUtils;
-                //TODO convert string to bytes
-                byte[] bd = null;
-                this.getMasterChannel().basicPublish(exchange, routingKey, basicProps, bd);
-            }else if(this.isSlaveEnable(props)){//若slave开启
-                AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
-                        .messageId(clientMsgId).correlationId(msgId)
-                        .type(CLUSTER_SLAVE)
-                        .build();
-                this.cluster = CLUSTER_SLAVE;
-                this.getSlaveChannel().basicPublish(exchange, routingKey, basicProps, null);
-            }
-        } catch (IOException e) {
-            logger.error("publish msg error with cluster:{},msgId:{},msgUuid:{}", cluster,clientMsgId, msgId,e);
+    public void publish(String body, String clientMsgId, String msgId, RabbitConfig rabbitConfig) throws IOException {
+        //若master/slave都没有开启
+        if(!this.isMasterEnable(rabbitConfig) && !this.isSlaveEnable(rabbitConfig)){
+            throw new RuntimeException("master and slave not enable.");
+        }else if(this.isMasterEnable(rabbitConfig)){//若master开启
+            AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
+                    .messageId(clientMsgId).correlationId(msgId)
+                    .type(RabbitConstants.CLUSTER_MASTER)
+                    .build();
+            this.cluster = RabbitConstants.CLUSTER_MASTER;
+            //import org.apache.commons.lang.SerializationUtils;
+            //TODO convert string to bytes
+            byte[] bd = null;
+            this.getMasterChannel().basicPublish(exchange, routingKey, basicProps, bd);
+        }else if(this.isSlaveEnable(rabbitConfig)){//若slave开启
+            AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
+                    .messageId(clientMsgId).correlationId(msgId)
+                    .type(RabbitConstants.CLUSTER_SLAVE)
+                    .build();
+            this.cluster = RabbitConstants.CLUSTER_SLAVE;
+            this.getSlaveChannel().basicPublish(exchange, routingKey, basicProps, null);
         }
     }
 
@@ -185,7 +171,7 @@ public class RabbitProducer {
      */
     public Channel getMasterChannel() {
         if(masterChannel == null){
-            masterChannel = this.createChannel(CLUSTER_MASTER);
+            masterChannel = this.createChannel(RabbitConstants.CLUSTER_MASTER);
             if(masterChannel == null){
                 throw new RuntimeException("create master channel fail.");
             }
@@ -199,7 +185,7 @@ public class RabbitProducer {
      */
     public Channel getSlaveChannel() {
         if(slaveChannel == null){
-            slaveChannel = this.createChannel(CLUSTER_SLAVE);
+            slaveChannel = this.createChannel(RabbitConstants.CLUSTER_SLAVE);
             if(slaveChannel == null){
                 throw new RuntimeException("create slave channel fail.");
             }
@@ -209,21 +195,25 @@ public class RabbitProducer {
 
     /**
      * 判断master是否开启
-     * @param props
+     * @param rabbitConfig
      * @return
      */
-    boolean isMasterEnable(Properties props){
-        //TODO
-        return true;
+    boolean isMasterEnable(RabbitConfig rabbitConfig){
+        if(rabbitConfig.getMasterEnable() == 1){
+            return true;
+        }
+        return false;
     }
 
     /**
      * 判断slave是否开启
-     * @param props
+     * @param rabbitConfig
      * @return
      */
-    boolean isSlaveEnable(Properties props){
-        //TODO
-        return true;
+    boolean isSlaveEnable(RabbitConfig rabbitConfig){
+        if(rabbitConfig.getSlaveEnable() == 1){
+            return true;
+        }
+        return false;
     }
 }
