@@ -6,7 +6,6 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
-import com.ymatou.mq.rabbit.support.ScheduledExecutorHelper;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -76,9 +75,9 @@ public class RabbitConnectionFactory {
      */
     static List<Address> getRabbitAddresses(String cluster, RabbitConfig rabbitConfig){
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
-            return toAddresses(rabbitConfig.getMasterUri());
+            return toAddresses(rabbitConfig.getMasterAddress());
         }else{
-            return toAddresses(rabbitConfig.getSlaveUri());
+            return toAddresses(rabbitConfig.getSlaveAddress());
         }
     }
 

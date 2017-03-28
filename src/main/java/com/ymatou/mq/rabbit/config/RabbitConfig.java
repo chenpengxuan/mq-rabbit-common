@@ -20,27 +20,12 @@ public class RabbitConfig {
     /**
      * 主集群uri
      */
-    private String masterUri;
+    private String masterAddress;
 
     /**
      * 备份集群uri
      */
-    private String slaveUri;
-
-    /**
-     * 是否开启master集群
-     */
-    private int masterEnable;
-
-    /**
-     * 是否开启slave集群
-     */
-    private int slaveEnable;
-
-    /**
-     * 虚拟目录
-     */
-    private String virtualHost;
+    private String slaveAddress;
 
     /**
      * 用户名
@@ -52,22 +37,37 @@ public class RabbitConfig {
      */
     private String password;
 
-    @DisconfFileItem(name = "rabbitmq.primary.uri")
-    public String getMasterUri() {
-        return masterUri;
+    /**
+     * 虚拟目录
+     */
+    private String virtualHost;
+
+    /**
+     * 是否开启master集群
+     */
+    private int masterEnable;
+
+    /**
+     * 是否开启slave集群
+     */
+    private int slaveEnable;
+
+    @DisconfFileItem(name = "rabbitmq.primary.address")
+    public String getMasterAddress() {
+        return masterAddress;
     }
 
-    public void setMasterUri(String masterUri) {
-        this.masterUri = masterUri;
+    public void setMasterAddress(String masterAddress) {
+        this.masterAddress = masterAddress;
     }
 
-    @DisconfFileItem(name = "rabbitmq.secondary.uri")
-    public String getSlaveUri() {
-        return slaveUri;
+    @DisconfFileItem(name = "rabbitmq.secondary.address")
+    public String getSlaveAddress() {
+        return slaveAddress;
     }
 
-    public void setSlaveUri(String slaveUri) {
-        this.slaveUri = slaveUri;
+    public void setSlaveAddress(String slaveAddress) {
+        this.slaveAddress = slaveAddress;
     }
 
     @DisconfFileItem(name = "rabbitmq.master.enable")
