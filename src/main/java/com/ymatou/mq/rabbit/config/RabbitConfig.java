@@ -42,6 +42,16 @@ public class RabbitConfig {
      */
     private String virtualHost;
 
+    /**
+     * 用户名
+     */
+    private String userName;
+
+    /**
+     * 密码
+     */
+    private String password;
+
     @DisconfFileItem(name = "rabbitmq.primary.uri")
     public String getMasterUri() {
         return masterUri;
@@ -85,5 +95,23 @@ public class RabbitConfig {
 
     public void setVirtualHost(String virtualHost) {
         this.virtualHost = virtualHost;
+    }
+
+    @DisconfFileItem(name = "rabbitmq.password")
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    @DisconfFileItem(name = "rabbitmq.username")
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 }

@@ -59,6 +59,8 @@ public class RabbitConnectionFactory {
             return connFactoryMapping.get(cluster);
         }else{
             ConnectionFactory factory = new ConnectionFactory();
+            factory.setUsername(rabbitConfig.getUserName());
+            factory.setPassword(rabbitConfig.getPassword());
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
             //factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
