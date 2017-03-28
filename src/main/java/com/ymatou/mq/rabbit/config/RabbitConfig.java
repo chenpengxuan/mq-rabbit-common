@@ -43,6 +43,9 @@ public class RabbitConfig {
     private String virtualHost;
 
     /**
+     * FIXME:以下两项移至receiver biz.properties，只在receiver才有效
+     */
+    /**
      * 是否开启master集群
      */
     private int masterEnable;
