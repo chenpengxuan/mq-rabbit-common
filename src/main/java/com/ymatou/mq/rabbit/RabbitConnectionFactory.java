@@ -4,6 +4,7 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
+import com.ymatou.mq.rabbit.support.ScheduledExecutorHelper;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -33,6 +34,7 @@ public class RabbitConnectionFactory {
     public static Connection createConnection(String cluster, RabbitConfig rabbitConfig) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
+        //创建连接
         return connectionFactory.newConnection();
     }
 
@@ -46,10 +48,10 @@ public class RabbitConnectionFactory {
             return connFactoryMapping.get(cluster);
         }else{
             ConnectionFactory factory = new ConnectionFactory();
-            factory.setUri(getClusterUrl(cluster, rabbitConfig));
+            String clusterUri = getClusterUrl(cluster, rabbitConfig);
+            factory.setUri(clusterUri);
             factory.setAutomaticRecoveryEnabled(true);
-            //TODO 心跳检测 ScheduledExecutorService
-            //factory.setHeartbeatExecutor(null);
+            factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
             return factory;
         }
     }

@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.Properties;
 
 /**
  * rabbit生产者
@@ -41,11 +40,6 @@ public class RabbitProducer {
     private String cluster = RabbitConstants.CLUSTER_MASTER;
 
     /**
-     * 默认一个连接创建通道数目
-     */
-    private static final int CHANNEL_NUMBER = 10;
-
-    /**
      * master通道
      */
     private Channel masterChannel;
@@ -54,6 +48,11 @@ public class RabbitProducer {
      * slave通道
      */
     private Channel slaveChannel;
+
+    /**
+     * 默认一个连接创建通道数目
+     */
+    private static final int DEFAULT_CHANNEL_NUMBER = 20;
 
     /**
      * rabbit ack事件监听
@@ -83,13 +82,13 @@ public class RabbitProducer {
             if(this.isMasterEnable(this.rabbitConfig)){
                 this.masterChannel = this.createChannel(RabbitConstants.CLUSTER_MASTER);
                 if(this.masterChannel == null){
-                    throw new RuntimeException("create master channel is null");
+                    throw new RuntimeException("create master channel not null");
                 }
             }
             if(this.isSlaveEnable(this.rabbitConfig)){
                 this.slaveChannel = this.createChannel(RabbitConstants.CLUSTER_SLAVE);
                 if(this.slaveChannel == null){
-                    throw new RuntimeException("create slave channel is null");
+                    throw new RuntimeException("create slave channel not null");
                 }
             }
         } catch (Exception e) {
@@ -109,14 +108,14 @@ public class RabbitProducer {
                 throw new RuntimeException("create rabbit conn failed.");
             }
             //创建channel
-            Channel channel = conn.createChannel(CHANNEL_NUMBER);
+            Channel channel = conn.createChannel(DEFAULT_CHANNEL_NUMBER);
             channel.exchangeDeclare(exchange, "direct", true);
             channel.queueDeclare(queue, true, false, false, null);
             channel.queueBind(queue, exchange, queue);
             channel.basicQos(1);
-            if(channel != null && this.confirmListener != null){
-                channel.addConfirmListener(this.confirmListener);
-            }
+            //设置confirm listener
+            channel.addConfirmListener(confirmListener);
+            channel.confirmSelect();
             return channel;
         } catch (Exception e) {
             throw new RuntimeException("create rabbit channel failed.",e);
