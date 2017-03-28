@@ -37,6 +37,11 @@ public class RabbitConfig {
      */
     private int slaveEnable;
 
+    /**
+     * 虚拟目录
+     */
+    private String virtualHost;
+
     @DisconfFileItem(name = "rabbitmq.primary.uri")
     public String getMasterUri() {
         return masterUri;
@@ -55,6 +60,7 @@ public class RabbitConfig {
         this.slaveUri = slaveUri;
     }
 
+    @DisconfFileItem(name = "rabbitmq.master.enable")
     public int getMasterEnable() {
         return masterEnable;
     }
@@ -63,11 +69,21 @@ public class RabbitConfig {
         this.masterEnable = masterEnable;
     }
 
+    @DisconfFileItem(name = "rabbitmq.slave.enable")
     public int getSlaveEnable() {
         return slaveEnable;
     }
 
     public void setSlaveEnable(int slaveEnable) {
         this.slaveEnable = slaveEnable;
+    }
+
+    @DisconfFileItem(name = "rabbitmq.virtual.host")
+    public String getVirtualHost() {
+        return virtualHost;
+    }
+
+    public void setVirtualHost(String virtualHost) {
+        this.virtualHost = virtualHost;
     }
 }

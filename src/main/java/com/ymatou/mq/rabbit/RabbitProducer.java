@@ -25,11 +25,6 @@ public class RabbitProducer {
     private String exchange = null;
 
     /**
-     * 路由KEY
-     */
-    private String routingKey = null;
-
-    /**
      * 队列名称
      */
     private String queue = null;
@@ -66,7 +61,6 @@ public class RabbitProducer {
 
     public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener, RabbitConfig rabbitConfig){
         this.exchange = appId;
-        this.routingKey = bizCode;
         this.queue = bizCode;
         this.confirmListener = confirmListener;
         this.rabbitConfig = rabbitConfig;
@@ -109,9 +103,9 @@ public class RabbitProducer {
             }
             //创建channel
             Channel channel = conn.createChannel(DEFAULT_CHANNEL_NUMBER);
-            channel.exchangeDeclare(exchange, "direct", true);
+            //channel.exchangeDeclare(exchange, "direct", true);
             channel.queueDeclare(queue, true, false, false, null);
-            channel.queueBind(queue, exchange, queue);
+            //channel.queueBind(queue, exchange, queue);
             channel.basicQos(1);
             //设置confirm listener
             channel.addConfirmListener(confirmListener);
@@ -153,14 +147,14 @@ public class RabbitProducer {
                     .type(RabbitConstants.CLUSTER_MASTER)
                     .build();
             this.cluster = RabbitConstants.CLUSTER_MASTER;
-            this.getMasterChannel().basicPublish(exchange, routingKey, basicProps, body.getBytes());
+            this.getMasterChannel().basicPublish("", queue, basicProps, body.getBytes());
         }else if(this.isSlaveEnable(rabbitConfig)){//若slave开启
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                     .messageId(clientMsgId).correlationId(msgId)
                     .type(RabbitConstants.CLUSTER_SLAVE)
                     .build();
             this.cluster = RabbitConstants.CLUSTER_SLAVE;
-            this.getSlaveChannel().basicPublish(exchange, routingKey, basicProps, body.getBytes());
+            this.getSlaveChannel().basicPublish("", queue, basicProps, body.getBytes());
         }
     }
 

@@ -1,5 +1,7 @@
 package com.ymatou.mq.rabbit;
 
+import com.rabbitmq.client.Address;
+import com.rabbitmq.client.AddressResolver;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
@@ -10,6 +12,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
@@ -35,6 +39,13 @@ public class RabbitConnectionFactory {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
         //创建连接
+        Connection conn = connectionFactory.newConnection(new AddressResolver() {
+            @Override
+            public List<Address> getAddresses() throws IOException {
+                List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
+                return addressList;
+            }
+        });
         return connectionFactory.newConnection();
     }
 
@@ -48,10 +59,9 @@ public class RabbitConnectionFactory {
             return connFactoryMapping.get(cluster);
         }else{
             ConnectionFactory factory = new ConnectionFactory();
-            String clusterUri = getClusterUrl(cluster, rabbitConfig);
-            factory.setUri(clusterUri);
+            factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
-            factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
+            //factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
             return factory;
         }
     }
@@ -62,11 +72,29 @@ public class RabbitConnectionFactory {
      * @param rabbitConfig
      * @return
      */
-    static String getClusterUrl(String cluster, RabbitConfig rabbitConfig){
+    static List<Address> getRabbitAddresses(String cluster, RabbitConfig rabbitConfig){
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
-            return rabbitConfig.getMasterUri();
+            return toAddresses(rabbitConfig.getMasterUri());
         }else{
-            return rabbitConfig.getSlaveUri();
+            return toAddresses(rabbitConfig.getSlaveUri());
         }
     }
+
+    /**
+     * 将url转换为address列表
+     * @param url
+     * @return
+     */
+    static List<Address> toAddresses(String url){
+        List<Address> addressList = new ArrayList<Address>();
+        String[] arr = url.split(";");
+        for(String item:arr){
+            String[] str = item.split(":");
+            Address address = new Address(str[0],Integer.parseInt(str[1]));
+            addressList.add(address);
+        }
+        return addressList;
+    }
+
+
 }
