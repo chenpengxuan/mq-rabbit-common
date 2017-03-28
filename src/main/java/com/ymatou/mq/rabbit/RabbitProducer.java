@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.*;
 
 /**
  * rabbit生产者
@@ -50,14 +51,19 @@ public class RabbitProducer {
     private static final int DEFAULT_CHANNEL_NUMBER = 20;
 
     /**
+     * rabbit配置信息
+     */
+    private RabbitConfig rabbitConfig;
+
+    /**
      * rabbit ack事件监听
      */
     private ConfirmListener confirmListener;
 
     /**
-     * rabbit配置信息
+     * 未确认集合
      */
-    private RabbitConfig rabbitConfig;
+    private SortedMap<Long, Map<String,Object>> unconfirmedSet = Collections.synchronizedSortedMap(new TreeMap<Long, Map<String,Object>>());
 
     public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener, RabbitConfig rabbitConfig){
         this.exchange = appId;
@@ -147,15 +153,42 @@ public class RabbitProducer {
                     .type(RabbitConstants.CLUSTER_MASTER)
                     .build();
             this.cluster = RabbitConstants.CLUSTER_MASTER;
-            this.getMasterChannel().basicPublish("", queue, basicProps, body.getBytes());
+
+            Channel channel = this.getMasterChannel();
+            //设置ack关联数据
+            unconfirmedSet.put(channel.getNextPublishSeqNo(),this.getPublishMessage(body,clientMsgId,msgId,queue));
+
+            channel.basicPublish("", queue, basicProps, body.getBytes());
         }else if(this.isSlaveEnable(rabbitConfig)){//若slave开启
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                     .messageId(clientMsgId).correlationId(msgId)
                     .type(RabbitConstants.CLUSTER_SLAVE)
                     .build();
             this.cluster = RabbitConstants.CLUSTER_SLAVE;
-            this.getSlaveChannel().basicPublish("", queue, basicProps, body.getBytes());
+
+            Channel channel = this.getSlaveChannel();
+            //设置ack关联数据
+            unconfirmedSet.put(channel.getNextPublishSeqNo(),this.getPublishMessage(body,clientMsgId,msgId,queue));
+
+            channel.basicPublish("", queue, basicProps, body.getBytes());
         }
+    }
+
+    /**
+     * 获取要发布的消息
+     * @param body
+     * @param bizId
+     * @param msgId
+     * @param queue
+     * @return
+     */
+    Map<String,Object> getPublishMessage(String body, String bizId, String msgId, String queue){
+        Map<String,Object> map = new HashMap<String,Object>();
+        map.put(RabbitConstants.QUEUE_CODE,queue);
+        map.put(RabbitConstants.MSG_ID,msgId);
+        map.put(RabbitConstants.BIZ_ID, bizId);
+        map.put(RabbitConstants.BODY,body);
+        return map;
     }
 
     /**
@@ -209,4 +242,13 @@ public class RabbitProducer {
         }
         return false;
     }
+
+    public ConfirmListener getConfirmListener() {
+        return confirmListener;
+    }
+
+    public SortedMap<Long, Map<String, Object>> getUnconfirmedSet() {
+        return unconfirmedSet;
+    }
+
 }
