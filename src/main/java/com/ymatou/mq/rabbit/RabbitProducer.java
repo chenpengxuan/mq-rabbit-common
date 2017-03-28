@@ -68,7 +68,6 @@ public class RabbitProducer {
     public RabbitProducer(String appId, String bizCode, ConfirmListener confirmListener, RabbitConfig rabbitConfig){
         this.exchange = appId;
         this.routingKey = bizCode;
-        //TODO 确认
         this.queue = bizCode;
         this.confirmListener = confirmListener;
         this.rabbitConfig = rabbitConfig;
@@ -83,12 +82,18 @@ public class RabbitProducer {
         try {
             if(this.isMasterEnable(this.rabbitConfig)){
                 this.masterChannel = this.createChannel(RabbitConstants.CLUSTER_MASTER);
+                if(this.masterChannel == null){
+                    throw new RuntimeException("create master channel is null");
+                }
             }
             if(this.isSlaveEnable(this.rabbitConfig)){
                 this.slaveChannel = this.createChannel(RabbitConstants.CLUSTER_SLAVE);
+                if(this.slaveChannel == null){
+                    throw new RuntimeException("create slave channel is null");
+                }
             }
         } catch (Exception e) {
-            throw new RuntimeException("create rabbit conn failed",e);
+            throw new RuntimeException("create rabbit channel error",e);
         }
     }
 
@@ -100,13 +105,16 @@ public class RabbitProducer {
         try {
             //创建conn
             Connection conn = this.createConnection(cluster);
+            if(conn == null){
+                throw new RuntimeException("create rabbit conn failed.");
+            }
             //创建channel
             Channel channel = conn.createChannel(CHANNEL_NUMBER);
             channel.exchangeDeclare(exchange, "direct", true);
             channel.queueDeclare(queue, true, false, false, null);
             channel.queueBind(queue, exchange, queue);
             channel.basicQos(1);
-            if(channel != null){
+            if(channel != null && this.confirmListener != null){
                 channel.addConfirmListener(this.confirmListener);
             }
             return channel;
@@ -120,17 +128,13 @@ public class RabbitProducer {
      * @return
      */
     Connection createConnection(String cluster){
-        //创建conn
-        Connection conn = null;
         try {
-            conn = RabbitConnectionFactory.createConnection(cluster,this.rabbitConfig);
+            //创建conn
+            Connection conn = RabbitConnectionFactory.createConnection(cluster,this.rabbitConfig);
+            return conn;
         } catch (Exception e) {
             throw new RuntimeException("create rabbit conn failed:" + e);
         }
-        if(conn == null){
-            throw new RuntimeException("create rabbit conn failed.");
-        }
-        return conn;
     }
 
     /**
@@ -142,8 +146,7 @@ public class RabbitProducer {
      * @throws IOException
      */
     public void publish(String body, String clientMsgId, String msgId, RabbitConfig rabbitConfig) throws IOException {
-        //若master/slave都没有开启
-        if(!this.isMasterEnable(rabbitConfig) && !this.isSlaveEnable(rabbitConfig)){
+        if(!this.isMasterEnable(rabbitConfig) && !this.isSlaveEnable(rabbitConfig)){//若master/slave都没有开启
             throw new RuntimeException("master and slave not enable.");
         }else if(this.isMasterEnable(rabbitConfig)){//若master开启
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
@@ -151,17 +154,14 @@ public class RabbitProducer {
                     .type(RabbitConstants.CLUSTER_MASTER)
                     .build();
             this.cluster = RabbitConstants.CLUSTER_MASTER;
-            //import org.apache.commons.lang.SerializationUtils;
-            //TODO convert string to bytes
-            byte[] bd = null;
-            this.getMasterChannel().basicPublish(exchange, routingKey, basicProps, bd);
+            this.getMasterChannel().basicPublish(exchange, routingKey, basicProps, body.getBytes());
         }else if(this.isSlaveEnable(rabbitConfig)){//若slave开启
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                     .messageId(clientMsgId).correlationId(msgId)
                     .type(RabbitConstants.CLUSTER_SLAVE)
                     .build();
             this.cluster = RabbitConstants.CLUSTER_SLAVE;
-            this.getSlaveChannel().basicPublish(exchange, routingKey, basicProps, null);
+            this.getSlaveChannel().basicPublish(exchange, routingKey, basicProps, body.getBytes());
         }
     }
 
