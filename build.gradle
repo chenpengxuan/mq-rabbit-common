@@ -35,7 +35,7 @@ ext {
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
-
+    compile(project(":mq-infrastructure"))
     compile "com.rabbitmq:amqp-client:${rabbitMqDriverVersion}"
 }
 
