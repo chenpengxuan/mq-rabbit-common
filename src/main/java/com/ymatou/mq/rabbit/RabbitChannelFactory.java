@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -111,16 +112,15 @@ public class RabbitChannelFactory {
         try {
             String cluster = rabbitConfig.getCurrentCluster();
             //若该集群存在己有conn，则查找channel数未达到最大数量的conn
-            if(connectionWrapperMapping.get(cluster) != null){
+            if(!CollectionUtils.isEmpty(connectionWrapperMapping.get(cluster))){
                 List<ConnectionWrapper> connectionWrapperList = connectionWrapperMapping.get(cluster);
-                if(!CollectionUtils.isEmpty(connectionWrapperList)){
-                    ConnectionWrapper connectionWrapper = getAvalibleConnectionWrapper(connectionWrapperList);
-                    if(connectionWrapper != null && connectionWrapper.getCount() < MAX_CHANNEL_NUM){
-                        return connectionWrapper;
-                    }
+                ConnectionWrapper connectionWrapper = getAvalibleConnectionWrapper(connectionWrapperList);
+                if(connectionWrapper != null && connectionWrapper.getCount() < MAX_CHANNEL_NUM){
+                    return connectionWrapper;
                 }
             }
             //否则，直接创建conn
+            connectionWrapperMapping.put(cluster,new ArrayList<ConnectionWrapper>());
             Connection conn = RabbitConnectionFactory.createConnection(cluster,rabbitConfig);
             ConnectionWrapper connectionWrapper = new ConnectionWrapper(conn);
             connectionWrapperMapping.get(cluster).add(connectionWrapper);
