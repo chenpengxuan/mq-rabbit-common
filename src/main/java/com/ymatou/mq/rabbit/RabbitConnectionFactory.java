@@ -76,6 +76,7 @@ public class RabbitConnectionFactory {
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
             //factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
+            connFactoryMapping.put(cluster,factory);
             return factory;
         }
     }

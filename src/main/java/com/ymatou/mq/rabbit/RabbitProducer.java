@@ -54,11 +54,11 @@ public class RabbitProducer {
                 .build();
 
         Channel channel = RabbitChannelFactory.getChannel(rabbitConfig);
+        //声明队列
+        this.declareQueue(channel,queue);
         //设置confirm listener
         channel.addConfirmListener(confirmListener);
         channel.confirmSelect();
-        //声明队列
-        this.declareQueue(channel,queue);
         //设置ack关联数据
         unconfirmedSet.put(channel.getNextPublishSeqNo(),message);
 
