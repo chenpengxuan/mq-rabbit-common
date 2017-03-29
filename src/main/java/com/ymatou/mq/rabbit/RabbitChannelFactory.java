@@ -4,9 +4,10 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.ConnectionWrapper;
-import org.apache.commons.collections.CollectionUtils;
+import com.ymatou.mq.rabbit.support.RabbitConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import java.util.Comparator;
 import java.util.List;
@@ -37,13 +38,48 @@ public class RabbitChannelFactory {
     private static Map<String,List<ConnectionWrapper>> connectionWrapperMapping = new ConcurrentHashMap<String,List<ConnectionWrapper>>();
 
     /**
+     * master channel上下文
+     */
+    private static ThreadLocal<Channel> masterChannelHolder = new ThreadLocal<Channel>();
+
+    /**
+     * slave channel上下文
+     */
+    private static ThreadLocal<Channel> slaveChannelHolder = new ThreadLocal<Channel>();
+
+    /**
+     * 获取channel
+     * @return
+     */
+    public static Channel getChannel(RabbitConfig rabbitConfig) {
+        ThreadLocal<Channel> channelHolder;
+        if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
+            channelHolder = masterChannelHolder;
+        }else{
+            channelHolder = slaveChannelHolder;
+        }
+
+        Channel channel = channelHolder.get();
+        if(channel != null){
+            return channel;
+        }else{
+            channel = RabbitChannelFactory.createChannel(rabbitConfig);
+            if(channel == null){
+                throw new RuntimeException("create channel fail.");
+            }
+            channelHolder.set(channel);
+            return channel;
+        }
+    }
+
+    /**
      * 创建生产通道
      * @return
      */
-    static Channel createChannel(String cluster, RabbitConfig rabbitConfig){
+    static Channel createChannel(RabbitConfig rabbitConfig){
         try {
             //获取conn
-            ConnectionWrapper connectionWrapper = getAvalibleConnectionWrapper(cluster,rabbitConfig);
+            ConnectionWrapper connectionWrapper = getConnectionWrapper(rabbitConfig.getCurrentCluster(),rabbitConfig);
             if(connectionWrapper == null){
                 throw new RuntimeException("create rabbit conn failed.");
             }
@@ -59,15 +95,15 @@ public class RabbitChannelFactory {
     }
 
     /**
-     * 获取channel数未达到最大数目的conn wrapper
+     * 获取conn wrapper
      * @return
      */
-    static ConnectionWrapper getAvalibleConnectionWrapper(String cluster, RabbitConfig rabbitConfig){
+    static ConnectionWrapper getConnectionWrapper(String cluster, RabbitConfig rabbitConfig){
         try {
             //若该集群存在己有conn，则查找channel数未达到最大数量的conn
             if(connectionWrapperMapping.get(cluster) != null){
                 List<ConnectionWrapper> connectionWrapperList = connectionWrapperMapping.get(cluster);
-                if(CollectionUtils.isNotEmpty(connectionWrapperList)){
+                if(!CollectionUtils.isEmpty(connectionWrapperList)){
                     ConnectionWrapper connectionWrapper = getAvalibleConnectionWrapper(connectionWrapperList);
                     if(connectionWrapper != null && connectionWrapper.getCount() < MAX_CHANNEL_NUM){
                         return connectionWrapper;
@@ -85,7 +121,7 @@ public class RabbitChannelFactory {
     }
 
     /**
-     * 根据channel数未达到最大值的conn wrapper
+     * 从现有连接中获取channel数未达到最大值的conn wrapper
      * @param connectionWrapperList
      * @return
      */

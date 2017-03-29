@@ -8,6 +8,7 @@ package com.ymatou.mq.rabbit.config;
 
 import com.baidu.disconf.client.common.annotations.DisconfFile;
 import com.baidu.disconf.client.common.annotations.DisconfFileItem;
+import com.ymatou.mq.rabbit.support.RabbitConstants;
 import org.springframework.stereotype.Component;
 
 /**
@@ -118,5 +119,17 @@ public class RabbitConfig {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    /**
+     * 获取当前集群
+     * @return
+     */
+    public String getCurrentCluster(){
+        if(masterEnable == 1){
+            return RabbitConstants.CLUSTER_MASTER;
+        }else{
+            return RabbitConstants.CLUSTER_SLAVE;
+        }
     }
 }
