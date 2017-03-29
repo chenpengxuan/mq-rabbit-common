@@ -62,6 +62,8 @@ public class RabbitProducer {
         //设置ack关联数据
         unconfirmedSet.put(channel.getNextPublishSeqNo(),message);
 
+        //TODO unconfirmedSet跟着channel走 listener跟着channel走，包装一层channel
+        //TODO basicProps persiste
         channel.basicPublish("", queue, basicProps, body.getBytes());
     }
 
