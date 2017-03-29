@@ -6,6 +6,9 @@ import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -24,6 +27,8 @@ import java.util.concurrent.TimeoutException;
  */
 public class RabbitConnectionFactory {
 
+    private static final Logger logger = LoggerFactory.getLogger(RabbitConnectionFactory.class);
+
     /**
      * 连接工厂映射表
      */
@@ -38,16 +43,23 @@ public class RabbitConnectionFactory {
     public static Connection createConnection(String cluster, RabbitConfig rabbitConfig) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
+
         //创建连接 FIXME 可以直接return 了
         Connection conn = connectionFactory.newConnection(new AddressResolver() {
             @Override
             public List<Address> getAddresses() throws IOException {
                 List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
                 Collections.shuffle(addressList);
+                if(!CollectionUtils.isEmpty(addressList)){
+                    logger.debug("rabbit ip/port list...");
+                    for(Address address:addressList){
+                        logger.debug("ip:{},port:{}",address.getHost(),address.getPort());
+                    }
+                }
                 return addressList;
             }
         });
-        return connectionFactory.newConnection();
+        return connection;
     }
 
     /**
@@ -65,6 +77,7 @@ public class RabbitConnectionFactory {
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
             //factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
+            connFactoryMapping.put(cluster,factory);
             return factory;
         }
     }
