@@ -48,11 +48,13 @@ public class RabbitConfig {
     /**
      * 是否开启master集群
      */
+    //FIXME: boolean
     private int masterEnable;
 
     /**
      * 是否开启slave集群
      */
+    //FIXME: boolean
     private int slaveEnable;
 
     @DisconfFileItem(name = "rabbitmq.primary.address")

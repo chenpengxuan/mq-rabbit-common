@@ -51,7 +51,7 @@ public class RabbitProducer {
 
     /**
      * 发布消息
-     *
+     * FIXME：参数就两个: queue, msg. rabbitConfig提取为属性?
      * @param queue
      * @param body
      * @param clientMsgId
