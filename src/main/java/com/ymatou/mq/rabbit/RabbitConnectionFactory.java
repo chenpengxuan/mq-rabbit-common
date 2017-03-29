@@ -12,6 +12,7 @@ import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,6 +43,7 @@ public class RabbitConnectionFactory {
             @Override
             public List<Address> getAddresses() throws IOException {
                 List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
+                Collections.shuffle(addressList);
                 return addressList;
             }
         });

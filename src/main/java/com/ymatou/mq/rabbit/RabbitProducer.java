@@ -35,6 +35,11 @@ public class RabbitProducer {
     private ConfirmListener confirmListener;
 
     /**
+     * 线程channel上下文
+     */
+    private ThreadLocal<Channel> channelHolder = new ThreadLocal<Channel>();
+
+        /**
      * 未确认集合
      */
     private SortedMap<Long, Map<String,Object>> unconfirmedSet = Collections.synchronizedSortedMap(new TreeMap<Long, Map<String,Object>>());
@@ -64,10 +69,12 @@ public class RabbitProducer {
                     .build();
             this.cluster = RabbitConstants.CLUSTER_MASTER;
 
-            Channel channel = this.getChannel(RabbitConstants.CLUSTER_MASTER, rabbitConfig, queue);
+            Channel channel = this.getChannel(RabbitConstants.CLUSTER_MASTER, rabbitConfig);
             //设置confirm listener
             channel.addConfirmListener(confirmListener);
             channel.confirmSelect();
+            //声明队列
+            this.declareQueue(channel,queue);
             //设置ack关联数据
             unconfirmedSet.put(channel.getNextPublishSeqNo(),this.getPublishMessage(body,clientMsgId,msgId, queue));
 
@@ -79,10 +86,12 @@ public class RabbitProducer {
                     .build();
             this.cluster = RabbitConstants.CLUSTER_SLAVE;
 
-            Channel channel = this.getChannel(RabbitConstants.CLUSTER_SLAVE, rabbitConfig, queue);
+            Channel channel = this.getChannel(RabbitConstants.CLUSTER_SLAVE, rabbitConfig);
             //设置confirm listener
             channel.addConfirmListener(confirmListener);
             channel.confirmSelect();
+            //声明队列
+            this.declareQueue(channel,queue);
             //设置ack关联数据
             unconfirmedSet.put(channel.getNextPublishSeqNo(),this.getPublishMessage(body,clientMsgId,msgId, queue));
 
@@ -111,13 +120,34 @@ public class RabbitProducer {
      * 获取channel
      * @return
      */
-    public Channel getChannel(String cluster, RabbitConfig rabbitConfig, String queue) {
-        Channel channel = RabbitChannelFactory.getChannel(cluster, rabbitConfig, queue);
-        if(channel == null){
-            throw new RuntimeException("create channel fail.");
+    Channel getChannel(String cluster, RabbitConfig rabbitConfig) {
+        Channel channel = channelHolder.get();
+        if(channel != null){
+            return channel;
+        }else{
+            channel = RabbitChannelFactory.createChannel(cluster,rabbitConfig);
+            if(channel == null){
+                throw new RuntimeException("create channel fail.");
+            }
+            channelHolder.set(channel);
+            return channel;
         }
-        return channel;
     }
+
+    /**
+     * 声明队列
+     * @param channel
+     * @param queue
+     * @throws IOException
+     */
+    void declareQueue(Channel channel,String queue) throws IOException {
+        //channel.exchangeDeclare(exchange, "direct", true);
+        channel.queueDeclare(queue, true, false, false, null);
+        //channel.queueBind(queue, exchange, queue);
+        channel.basicQos(1);
+    }
+
+
 
     /**
      * 判断master是否开启
