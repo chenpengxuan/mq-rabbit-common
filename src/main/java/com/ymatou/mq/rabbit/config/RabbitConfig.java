@@ -47,16 +47,14 @@ public class RabbitConfig {
      * FIXME:以下两项移至receiver biz.properties，只在receiver才有效
      */
     /**
-     * 是否开启master集群
+     * 是否开启master集群，默认开启
      */
-    //FIXME: boolean
-    private int masterEnable;
+    private boolean masterEnable = true;
 
     /**
-     * 是否开启slave集群
+     * 是否开启slave集群，默认开启
      */
-    //FIXME: boolean
-    private int slaveEnable;
+    private boolean slaveEnable = true;
 
     @DisconfFileItem(name = "rabbitmq.primary.address")
     public String getMasterAddress() {
@@ -77,20 +75,20 @@ public class RabbitConfig {
     }
 
     @DisconfFileItem(name = "rabbitmq.master.enable")
-    public int getMasterEnable() {
+    public boolean isMasterEnable() {
         return masterEnable;
     }
 
-    public void setMasterEnable(int masterEnable) {
+    public void setMasterEnable(boolean masterEnable) {
         this.masterEnable = masterEnable;
     }
 
     @DisconfFileItem(name = "rabbitmq.slave.enable")
-    public int getSlaveEnable() {
+    public boolean isSlaveEnable() {
         return slaveEnable;
     }
 
-    public void setSlaveEnable(int slaveEnable) {
+    public void setSlaveEnable(boolean slaveEnable) {
         this.slaveEnable = slaveEnable;
     }
 
@@ -126,10 +124,12 @@ public class RabbitConfig {
      * @return
      */
     public String getCurrentCluster(){
-        if(masterEnable == 1){
+        if(masterEnable){
             return RabbitConstants.CLUSTER_MASTER;
-        }else{
+        }else if(slaveEnable){
             return RabbitConstants.CLUSTER_SLAVE;
+        }else{
+            return null;
         }
     }
 }
