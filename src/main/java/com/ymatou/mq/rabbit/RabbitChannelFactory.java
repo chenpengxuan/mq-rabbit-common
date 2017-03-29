@@ -110,9 +110,8 @@ public class RabbitChannelFactory {
      * @param rabbitConfig
      * @return
      */
-    static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
     //FIXME available
-    static ConnectionWrapper getAvalibleConnectionWrapper(String cluster, RabbitConfig rabbitConfig){
+    static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
         try {
             String cluster = rabbitConfig.getCurrentCluster();
             //若该集群存在己有conn，则查找channel数未达到最大数量的conn
