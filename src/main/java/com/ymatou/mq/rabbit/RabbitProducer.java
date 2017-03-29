@@ -61,6 +61,7 @@ public class RabbitProducer {
      */
     public void publish(String queue, String body, String clientMsgId, String msgId, RabbitConfig rabbitConfig) throws IOException {
         if(!this.isMasterEnable(rabbitConfig) && !this.isSlaveEnable(rabbitConfig)){//若master/slave都没有开启
+            //FIXME:不是抛异常，直接调分发接口
             throw new RuntimeException("master and slave not enable.");
         }else if(this.isMasterEnable(rabbitConfig)){//若master开启
             AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
