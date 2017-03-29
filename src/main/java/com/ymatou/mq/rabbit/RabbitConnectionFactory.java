@@ -38,7 +38,7 @@ public class RabbitConnectionFactory {
     public static Connection createConnection(String cluster, RabbitConfig rabbitConfig) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
-        //创建连接
+        //创建连接 FIXME 可以直接return 了
         Connection conn = connectionFactory.newConnection(new AddressResolver() {
             @Override
             public List<Address> getAddresses() throws IOException {

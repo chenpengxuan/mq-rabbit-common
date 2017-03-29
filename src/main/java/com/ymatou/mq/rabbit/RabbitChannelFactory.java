@@ -5,6 +5,7 @@ import com.rabbitmq.client.Connection;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.ConnectionWrapper;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
@@ -93,6 +94,7 @@ public class RabbitChannelFactory {
             }
             Connection connection = connectionWrapper.getConnection();
             //创建channel
+            //FIXME 不要 带参DEFAULT_CHANNEL_NUMBER
             Channel channel = connection.createChannel(DEFAULT_CHANNEL_NUMBER);
             //设置conn.channel数目+1
             connectionWrapper.incCount();
@@ -108,6 +110,8 @@ public class RabbitChannelFactory {
      * @return
      */
     static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
+    //FIXME available
+    static ConnectionWrapper getAvalibleConnectionWrapper(String cluster, RabbitConfig rabbitConfig){
         try {
             String cluster = rabbitConfig.getCurrentCluster();
             //若该集群存在己有conn，则查找channel数未达到最大数量的conn
@@ -135,6 +139,7 @@ public class RabbitChannelFactory {
      * @param connectionWrapperList
      * @return
      */
+    //FIXME available
     static ConnectionWrapper getAvalibleConnectionWrapper(List<ConnectionWrapper> connectionWrapperList){
         // 获取连接池中Channel数量最小的连接
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
