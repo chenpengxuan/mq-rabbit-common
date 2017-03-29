@@ -2,15 +2,20 @@ package com.ymatou.mq.rabbit.support;
 
 import com.rabbitmq.client.Connection;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
- * 连接wrapper
+ * 连接wrapper，主要用于计channel数目
  * Created by zhangzhihua on 2017/3/28.
  */
 public class ConnectionWrapper {
 
     private Connection connection;
 
-    private int count;
+    /**
+     * 该conn下channel数目
+     */
+    private AtomicInteger count = new AtomicInteger(0);
 
     public ConnectionWrapper(Connection connection){
         this.connection = connection;
@@ -24,19 +29,20 @@ public class ConnectionWrapper {
         this.connection = connection;
     }
 
+    /**
+     * 获取连接使用数
+     *
+     * @return
+     */
     public int getCount() {
-        return count;
+        return count.intValue();
     }
 
-    public void setCount(int count) {
-        this.count = count;
+    /**
+     * 增加使用计数
+     */
+    public int incCount() {
+        return count.incrementAndGet();
     }
 
-    public void incr(){
-        count++;
-    }
-
-    public void decr(){
-        count--;
-    }
 }
