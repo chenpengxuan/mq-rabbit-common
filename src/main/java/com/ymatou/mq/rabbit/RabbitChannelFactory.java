@@ -49,16 +49,24 @@ public class RabbitChannelFactory {
 
     /**
      * 获取channel
+     * @param rabbitConfig
      * @return
      */
     public static Channel getChannel(RabbitConfig rabbitConfig) {
-        ThreadLocal<Channel> channelHolder;
         if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
-            channelHolder = masterChannelHolder;
+            return getChannel(rabbitConfig,masterChannelHolder);
         }else{
-            channelHolder = slaveChannelHolder;
+            return getChannel(rabbitConfig,slaveChannelHolder);
         }
+    }
 
+    /**
+     * 获取channel
+     * @param rabbitConfig
+     * @param channelHolder
+     * @return
+     */
+    static Channel getChannel(RabbitConfig rabbitConfig,ThreadLocal<Channel> channelHolder){
         Channel channel = channelHolder.get();
         if(channel != null){
             return channel;
@@ -79,7 +87,7 @@ public class RabbitChannelFactory {
     static Channel createChannel(RabbitConfig rabbitConfig){
         try {
             //获取conn
-            ConnectionWrapper connectionWrapper = getConnectionWrapper(rabbitConfig.getCurrentCluster(),rabbitConfig);
+            ConnectionWrapper connectionWrapper = getConnectionWrapper(rabbitConfig);
             if(connectionWrapper == null){
                 throw new RuntimeException("create rabbit conn failed.");
             }
@@ -96,10 +104,12 @@ public class RabbitChannelFactory {
 
     /**
      * 获取conn wrapper
+     * @param rabbitConfig
      * @return
      */
-    static ConnectionWrapper getConnectionWrapper(String cluster, RabbitConfig rabbitConfig){
+    static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
         try {
+            String cluster = rabbitConfig.getCurrentCluster();
             //若该集群存在己有conn，则查找channel数未达到最大数量的conn
             if(connectionWrapperMapping.get(cluster) != null){
                 List<ConnectionWrapper> connectionWrapperList = connectionWrapperMapping.get(cluster);
