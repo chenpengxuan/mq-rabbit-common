@@ -1,5 +1,5 @@
 group 'com.ymatou.mq'
-version '1.0.0.20170208'
+version '1.0.0.2017033001'
 
 apply plugin: 'java'
 apply plugin: "idea"
@@ -30,13 +30,17 @@ compileTestJava {
 
 ext {
     rabbitMqDriverVersion = "4.1.0"
+    mqInfrastructureVersion = "1.0.0.2017033001"
 }
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
-    compile(project(":mq-infrastructure"))
+//    compile(project(":mq-infrastructure"))
+
     compile "com.rabbitmq:amqp-client:${rabbitMqDriverVersion}"
+
+    compile "com.ymatou.mq:mq-infrastructure:${mqInfrastructureVersion}"
 }
 
 //上传到nexus
