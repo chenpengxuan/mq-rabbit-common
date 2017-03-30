@@ -5,6 +5,8 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.ConfirmListener;
 import com.ymatou.mq.infrastructure.model.Message;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
+import com.ymatou.mq.rabbit.support.ChannelWrapper;
+import com.ymatou.mq.rabbit.support.RabbitAckHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +31,9 @@ public class RabbitProducer {
     private RabbitConfig rabbitConfig;
 
     /**
-     * rabbit ack事件监听
+     * rabbit ack回调处理类
      */
-    private ConfirmListener confirmListener;
-
-    /**
-     * 未确认集合
-     */
-    private SortedMap<Long, Message> unconfirmedSet;
+    private RabbitAckHandler rabbitAckHandler;
 
     /**
      * 发布消息
@@ -48,22 +45,31 @@ public class RabbitProducer {
         String msgId = message.getId();
         String bizId = message.getBizId();
         String body = message.getBody();
+
+        //获取channel
+        ChannelWrapper channelWrapper = RabbitChannelFactory.getChannelWrapper(rabbitConfig);
+        Channel channel = channelWrapper.getChannel();
+        //若是第一次创建channel，则初始化ack相关
+        if(channelWrapper.getUnconfirmedSet() == null){
+            //保证channel与unconfirmedset&acklistener一对一
+            SortedMap<Long, Message> unconfirmedSet = Collections.synchronizedSortedMap(new TreeMap<Long, Message>());
+            channelWrapper.setUnconfirmedSet(unconfirmedSet);
+            RabbitAckListener rabbitAckListener = new RabbitAckListener(channel,unconfirmedSet,rabbitAckHandler);
+            channel.addConfirmListener(rabbitAckListener);
+            channel.confirmSelect();
+        }
+        //声明队列
+        this.declareQueue(channel,queue);
+
+        //设置ack关联数据
+        channelWrapper.getUnconfirmedSet().put(channel.getNextPublishSeqNo(),message);
+
+        //TODO basicProps persiste
+        //MessageProperties.MINIMAL_PERSISTENT_BASIC
         AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                 .messageId(bizId).correlationId(msgId)
                 .type(rabbitConfig.getCurrentCluster())
                 .build();
-
-        Channel channel = RabbitChannelFactory.getChannel(rabbitConfig);
-        //声明队列
-        this.declareQueue(channel,queue);
-        //设置confirm listener
-        channel.addConfirmListener(confirmListener);
-        channel.confirmSelect();
-        //设置ack关联数据
-        unconfirmedSet.put(channel.getNextPublishSeqNo(),message);
-
-        //TODO unconfirmedSet跟着channel走 listener跟着channel走，包装一层channel
-        //TODO basicProps persiste
         channel.basicPublish("", queue, basicProps, body.getBytes());
     }
 
@@ -80,19 +86,7 @@ public class RabbitProducer {
         channel.basicQos(1);
     }
 
-    public ConfirmListener getConfirmListener() {
-        return confirmListener;
-    }
-
-    public void setConfirmListener(ConfirmListener confirmListener) {
-        this.confirmListener = confirmListener;
-    }
-
-    public SortedMap<Long, Message> getUnconfirmedSet() {
-        return unconfirmedSet;
-    }
-
-    public void setUnconfirmedSet(SortedMap<Long, Message> unconfirmedSet) {
-        this.unconfirmedSet = unconfirmedSet;
+    public void setRabbitAckHandler(RabbitAckHandler rabbitAckHandler) {
+        this.rabbitAckHandler = rabbitAckHandler;
     }
 }

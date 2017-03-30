@@ -2,18 +2,18 @@ package com.ymatou.mq.rabbit;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.ymatou.mq.infrastructure.model.Message;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
+import com.ymatou.mq.rabbit.support.ChannelWrapper;
 import com.ymatou.mq.rabbit.support.ConnectionWrapper;
+import com.ymatou.mq.rabbit.support.RabbitAckHandler;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,11 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RabbitChannelFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(RabbitChannelFactory.class);
-
-    /**
-     * 一个连接默认创建通道数目
-     */
-    private static final int DEFAULT_CHANNEL_NUMBER = 20;
 
     /**
      * 一个conn允许创建最大channel数目
@@ -40,45 +35,45 @@ public class RabbitChannelFactory {
     private static Map<String,List<ConnectionWrapper>> connectionWrapperMapping = new ConcurrentHashMap<String,List<ConnectionWrapper>>();
 
     /**
-     * master channel上下文
+     * master channel wrapper上下文
      */
-    private static ThreadLocal<Channel> masterChannelHolder = new ThreadLocal<Channel>();
+    private static ThreadLocal<ChannelWrapper> masterChannelWrapperHolder = new ThreadLocal<ChannelWrapper>();
 
     /**
-     * slave channel上下文
+     * slave channel wrapper上下文
      */
-    private static ThreadLocal<Channel> slaveChannelHolder = new ThreadLocal<Channel>();
+    private static ThreadLocal<ChannelWrapper> slaveChannelWrapperHolder = new ThreadLocal<ChannelWrapper>();
 
     /**
-     * 获取channel
+     * 获取channel wrapper
      * @param rabbitConfig
      * @return
      */
-    public static Channel getChannel(RabbitConfig rabbitConfig) {
+    public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig) {
         if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
-            return getChannel(rabbitConfig,masterChannelHolder);
+            return getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
         }else{
-            return getChannel(rabbitConfig,slaveChannelHolder);
+            return getChannelWrapper(rabbitConfig,slaveChannelWrapperHolder);
         }
     }
 
     /**
-     * 获取channel
+     * 获取channel wrapper
      * @param rabbitConfig
-     * @param channelHolder
+     * @param channelWrapperHolder
      * @return
      */
-    static Channel getChannel(RabbitConfig rabbitConfig,ThreadLocal<Channel> channelHolder){
-        Channel channel = channelHolder.get();
-        if(channel != null){
-            return channel;
+    static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig, ThreadLocal<ChannelWrapper> channelWrapperHolder){
+        ChannelWrapper channelWrapper = channelWrapperHolder.get();
+        if(channelWrapper != null){
+            return channelWrapper;
         }else{
-            channel = RabbitChannelFactory.createChannel(rabbitConfig);
-            if(channel == null){
+            channelWrapper = RabbitChannelFactory.createChannelWrapper(rabbitConfig);
+            if(channelWrapper == null){
                 throw new RuntimeException("create channel fail.");
             }
-            channelHolder.set(channel);
-            return channel;
+            channelWrapperHolder.set(channelWrapper);
+            return channelWrapper;
         }
     }
 
@@ -86,7 +81,7 @@ public class RabbitChannelFactory {
      * 创建生产通道
      * @return
      */
-    static Channel createChannel(RabbitConfig rabbitConfig){
+    static ChannelWrapper createChannelWrapper(RabbitConfig rabbitConfig){
         try {
             //获取conn
             ConnectionWrapper connectionWrapper = getConnectionWrapper(rabbitConfig);
@@ -94,12 +89,13 @@ public class RabbitChannelFactory {
                 throw new RuntimeException("create rabbit conn failed.");
             }
             Connection connection = connectionWrapper.getConnection();
+
             //创建channel
-            //FIXME 不要 带参DEFAULT_CHANNEL_NUMBER
-            Channel channel = connection.createChannel(DEFAULT_CHANNEL_NUMBER);
+            Channel channel = connection.createChannel();
             //设置conn.channel数目+1
             connectionWrapper.incCount();
-            return channel;
+
+            return new ChannelWrapper(channel);
         } catch (Exception e) {
             throw new RuntimeException("create rabbit channel failed.",e);
         }
@@ -110,14 +106,13 @@ public class RabbitChannelFactory {
      * @param rabbitConfig
      * @return
      */
-    //FIXME available
     static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
         try {
             String cluster = rabbitConfig.getCurrentCluster();
             //若该集群存在己有conn，则查找channel数未达到最大数量的conn
             if(!CollectionUtils.isEmpty(connectionWrapperMapping.get(cluster))){
                 List<ConnectionWrapper> connectionWrapperList = connectionWrapperMapping.get(cluster);
-                ConnectionWrapper connectionWrapper = getAvalibleConnectionWrapper(connectionWrapperList);
+                ConnectionWrapper connectionWrapper = getAvailableConnectionWrapper(connectionWrapperList);
                 if(connectionWrapper != null && connectionWrapper.getCount() < MAX_CHANNEL_NUM){
                     return connectionWrapper;
                 }
@@ -138,8 +133,7 @@ public class RabbitChannelFactory {
      * @param connectionWrapperList
      * @return
      */
-    //FIXME available
-    static ConnectionWrapper getAvalibleConnectionWrapper(List<ConnectionWrapper> connectionWrapperList){
+    static ConnectionWrapper getAvailableConnectionWrapper(List<ConnectionWrapper> connectionWrapperList){
         // 获取连接池中Channel数量最小的连接
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
                 .findFirst().get();
