@@ -7,6 +7,7 @@ import com.ymatou.mq.infrastructure.model.Message;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.ChannelWrapper;
 import com.ymatou.mq.rabbit.support.RabbitAckHandler;
+import com.ymatou.mq.rabbit.support.RabbitConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,7 @@ public class RabbitProducer {
         String bizId = message.getBizId();
         String body = message.getBody();
 
+        logger.debug("RabbitProducer.publish,current thread name:{},thread id:{}",Thread.currentThread().getName(),Thread.currentThread().getId());
         //获取channel
         ChannelWrapper channelWrapper = RabbitChannelFactory.getChannelWrapper(rabbitConfig);
         Channel channel = channelWrapper.getChannel();
@@ -64,11 +66,9 @@ public class RabbitProducer {
         //设置ack关联数据
         channelWrapper.getUnconfirmedSet().put(channel.getNextPublishSeqNo(),message);
 
-        //TODO basicProps persiste
-        //MessageProperties.MINIMAL_PERSISTENT_BASIC
         AMQP.BasicProperties basicProps = new AMQP.BasicProperties.Builder()
                 .messageId(bizId).correlationId(msgId)
-                .type(rabbitConfig.getCurrentCluster())
+                .type(rabbitConfig.getCurrentCluster()).deliveryMode(RabbitConstants.DELIVERY_PERSISTENT)
                 .build();
         channel.basicPublish("", queue, basicProps, body.getBytes());
     }

@@ -39,7 +39,7 @@ public class RabbitAckListener implements ConfirmListener {
         this.channel = channel;
         this.unconfirmedSet = unconfirmedSet;
         this.rabbitAckHandler = rabbitAckHandler;
-        logger.info("init RabbitAckListener,channel:{},unconfirmedSet:{},rabbitAckHandler:{}",channel,unconfirmedSet,rabbitAckHandler);
+        logger.debug("new RabbitAckListener,current thread name:{},thread id:{},channel:{},unconfirmedSet:{},rabbitAckHandler:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channel.hashCode(),unconfirmedSet,rabbitAckHandler);
     }
 
     @Override

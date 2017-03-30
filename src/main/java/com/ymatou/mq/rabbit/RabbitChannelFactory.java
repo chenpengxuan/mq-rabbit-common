@@ -51,7 +51,9 @@ public class RabbitChannelFactory {
      */
     public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig) {
         if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
-            return getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
+            ChannelWrapper channelWrapper = getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
+            logger.debug("getChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channelWrapper.getChannel());
+            return channelWrapper;
         }else{
             return getChannelWrapper(rabbitConfig,slaveChannelWrapperHolder);
         }
@@ -92,6 +94,7 @@ public class RabbitChannelFactory {
 
             //创建channel
             Channel channel = connection.createChannel();
+            logger.debug("createChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channel.hashCode());
             //设置conn.channel数目+1
             connectionWrapper.incCount();
 
