@@ -23,9 +23,9 @@ public class RabbitChannelFactory {
     private static final Logger logger = LoggerFactory.getLogger(RabbitChannelFactory.class);
 
     /**
-     * 一个conn允许创建最大channel数目
+     * 一个conn正常允许创建的channel数目，若conn超过最大数则conn.channel数可超过这个数目
      */
-    private static final int MAX_CHANNEL_NUM = 50;
+    private static final int CORE_CHANNEL_NUM = 50;
 
     /**
      * connection wrapper映射表
@@ -89,14 +89,16 @@ public class RabbitChannelFactory {
                 throw new RuntimeException("create rabbit conn failed.");
             }
             Connection connection = connectionWrapper.getConnection();
-
             //创建channel
             Channel channel = connection.createChannel();
             logger.debug("createChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channel.hashCode());
             //设置conn.channel数目+1
             connectionWrapper.incCount();
 
-            return new ChannelWrapper(channel);
+            ChannelWrapper channelWrapper = new ChannelWrapper(channel);
+            channelWrapper.addRecoveryListener();
+
+            return channelWrapper;
         } catch (Exception e) {
             throw new RuntimeException("create rabbit channel failed.",e);
         }
@@ -114,7 +116,7 @@ public class RabbitChannelFactory {
             if(!CollectionUtils.isEmpty(connectionWrapperMapping.get(cluster))){
                 List<ConnectionWrapper> connectionWrapperList = connectionWrapperMapping.get(cluster);
                 ConnectionWrapper connectionWrapper = getAvailableConnectionWrapper(connectionWrapperList);
-                if(connectionWrapper != null && connectionWrapper.getCount() < MAX_CHANNEL_NUM){
+                if(connectionWrapper != null && connectionWrapper.getCount() < CORE_CHANNEL_NUM){
                     return connectionWrapper;
                 }
             }

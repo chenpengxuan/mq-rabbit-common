@@ -4,6 +4,7 @@ import com.rabbitmq.client.Address;
 import com.rabbitmq.client.AddressResolver;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.ymatou.mq.infrastructure.support.ScheduledExecutorHelper;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
 import org.slf4j.Logger;
@@ -43,7 +44,6 @@ public class RabbitConnectionFactory {
     public static Connection createConnection(String cluster, RabbitConfig rabbitConfig) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
-
         //创建连接
         Connection conn = connectionFactory.newConnection(new AddressResolver() {
             @Override
@@ -76,7 +76,7 @@ public class RabbitConnectionFactory {
             factory.setPassword(rabbitConfig.getPassword());
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
-            //factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread|" + clusterUri));
+            factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread"));
             connFactoryMapping.put(cluster,factory);
             return factory;
         }
