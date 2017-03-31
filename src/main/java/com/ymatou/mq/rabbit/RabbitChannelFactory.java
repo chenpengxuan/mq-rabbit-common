@@ -27,6 +27,11 @@ public class RabbitChannelFactory {
     private static final int CORE_CHANNEL_NUM = 50;
 
     /**
+     * 最大允许创建连接数
+     */
+    private static final int MAX_CONNECTION_NUM = 100;
+
+    /**
      * master conn wrapper列表
      */
     private static List<ConnectionWrapper> masterConnectionWrapperList = Collections.synchronizedList(new ArrayList<ConnectionWrapper>());
@@ -129,16 +134,20 @@ public class RabbitChannelFactory {
      */
     static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig,List<ConnectionWrapper> connectionWrapperList){
         try {
-            //从现有连接中获取channel数最小conn wrapper
-            ConnectionWrapper connectionWrapper = getConnectionWrapperByMinChannelCount(connectionWrapperList);
+            //从现有连接中获取可用的conn wrapper
+            ConnectionWrapper connectionWrapper = getConnectionWrapperOfHasAvailableChannels(connectionWrapperList);
 
-            if(connectionWrapper != null && connectionWrapper.getCount() < CORE_CHANNEL_NUM){//若有可用
+            if(connectionWrapper != null){//若有可用
                 return connectionWrapper;
-            }else{//否则，直接创建conn
-                Connection conn = RabbitConnectionFactory.createConnection(rabbitConfig.getCurrentCluster(),rabbitConfig);
-                connectionWrapper = new ConnectionWrapper(conn);
-                connectionWrapperList.add(connectionWrapper);
-                return connectionWrapper;
+            }else{//否则
+                if(connectionWrapperList.size() < MAX_CONNECTION_NUM){//若连接数未达上限，则直接创建
+                    Connection connection = RabbitConnectionFactory.createConnection(rabbitConfig.getCurrentCluster(),rabbitConfig);
+                    connectionWrapper = new ConnectionWrapper(connection);
+                    connectionWrapperList.add(connectionWrapper);
+                    return connectionWrapper;
+                }else{//若连接数已达上限，则从现有连接中选择channel数目最小的
+                    return getConnectionWrapperOfHasMinChannels(connectionWrapperList);
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException("create rabbit conn failed:" + e);
@@ -146,15 +155,31 @@ public class RabbitChannelFactory {
     }
 
     /**
-     * 从现有连接中获取channel数最小conn wrapper
+     * 从现有连接中获取还有可用channel的conn wrapper
      * @param connectionWrapperList
      * @return
      */
-    static ConnectionWrapper getConnectionWrapperByMinChannelCount(List<ConnectionWrapper> connectionWrapperList){
+    static ConnectionWrapper getConnectionWrapperOfHasAvailableChannels(List<ConnectionWrapper> connectionWrapperList){
         if(CollectionUtils.isEmpty(connectionWrapperList)){
             return null;
         }
-        // 获取连接池中Channel数量最小的连接
+        // 按channel数排序并取第一个
+        ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
+                .findFirst().get();
+        //若不超过指定数量，则返回
+        if(connectionWrapper.getCount() < CORE_CHANNEL_NUM){
+            return  connectionWrapper;
+        }
+        return null;
+    }
+
+    /**
+     * 从现有连接中获取持有最小channel数的conn wrapper
+     * @param connectionWrapperList
+     * @return
+     */
+    static ConnectionWrapper getConnectionWrapperOfHasMinChannels(List<ConnectionWrapper> connectionWrapperList){
+        // 按channel数排序并取第一个
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
                 .findFirst().get();
         return connectionWrapper;
