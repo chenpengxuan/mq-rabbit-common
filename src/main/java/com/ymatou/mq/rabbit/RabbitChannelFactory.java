@@ -9,6 +9,7 @@ import com.ymatou.mq.rabbit.support.RabbitConstants;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 
@@ -150,6 +151,9 @@ public class RabbitChannelFactory {
      * @return
      */
     static ConnectionWrapper getConnectionWrapperByMinChannelCount(List<ConnectionWrapper> connectionWrapperList){
+        if(CollectionUtils.isEmpty(connectionWrapperList)){
+            return null;
+        }
         // 获取连接池中Channel数量最小的连接
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
                 .findFirst().get();
