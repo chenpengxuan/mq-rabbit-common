@@ -32,6 +32,11 @@ public class ChannelWrapper {
      */
     private SortedMap<Long, Message> unconfirmedSet;
 
+    /**
+     * 当前channel所在线程
+     */
+    private Thread thread;
+
     public ChannelWrapper(Channel channel){
         this.channel = channel;
     }
@@ -75,5 +80,13 @@ public class ChannelWrapper {
 
     public void setUnconfirmedSet(SortedMap<Long, Message> unconfirmedSet) {
         this.unconfirmedSet = unconfirmedSet;
+    }
+
+    public Thread getThread() {
+        return thread;
+    }
+
+    public void setThread(Thread thread) {
+        this.thread = thread;
     }
 }

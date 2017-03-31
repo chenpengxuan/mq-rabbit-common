@@ -105,6 +105,7 @@ public class RabbitChannelFactory {
             connectionWrapper.incCount();
 
             ChannelWrapper channelWrapper = new ChannelWrapper(channel);
+            //添加recovery监听
             channelWrapper.addRecoveryListener();
 
             return channelWrapper;
