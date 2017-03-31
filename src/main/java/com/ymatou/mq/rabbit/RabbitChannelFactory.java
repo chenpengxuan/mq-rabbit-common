@@ -9,10 +9,8 @@ import com.ymatou.mq.rabbit.support.RabbitConstants;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * rabbit channel创建工厂
@@ -28,9 +26,14 @@ public class RabbitChannelFactory {
     private static final int CORE_CHANNEL_NUM = 50;
 
     /**
-     * connection wrapper映射表
+     * master conn wrapper列表
      */
-    private static Map<String,List<ConnectionWrapper>> connectionWrapperMapping = new ConcurrentHashMap<String,List<ConnectionWrapper>>();
+    private static List<ConnectionWrapper> masterConnectionWrapperList = Collections.synchronizedList(new ArrayList<ConnectionWrapper>());
+
+    /**
+     * slave conn wrapper列表
+     */
+    private static List<ConnectionWrapper> slaveConnectionWrapperList = Collections.synchronizedList(new ArrayList<ConnectionWrapper>());
 
     /**
      * master channel wrapper上下文
@@ -110,33 +113,43 @@ public class RabbitChannelFactory {
      * @return
      */
     static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
+        if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
+            return getConnectionWrapper(rabbitConfig,masterConnectionWrapperList);
+        }else{
+            return getConnectionWrapper(rabbitConfig,slaveConnectionWrapperList);
+        }
+    }
+
+    /**
+     * 获取ConnectionWrapper
+     * @param rabbitConfig
+     * @param connectionWrapperList
+     * @return
+     */
+    static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig,List<ConnectionWrapper> connectionWrapperList){
         try {
-            String cluster = rabbitConfig.getCurrentCluster();
-            //若该集群存在己有conn，则查找channel数未达到最大数量的conn
-            if(!CollectionUtils.isEmpty(connectionWrapperMapping.get(cluster))){
-                List<ConnectionWrapper> connectionWrapperList = connectionWrapperMapping.get(cluster);
-                ConnectionWrapper connectionWrapper = getAvailableConnectionWrapper(connectionWrapperList);
-                if(connectionWrapper != null && connectionWrapper.getCount() < CORE_CHANNEL_NUM){
-                    return connectionWrapper;
-                }
+            //从现有连接中获取channel数最小conn wrapper
+            ConnectionWrapper connectionWrapper = getConnectionWrapperByMinChannelCount(connectionWrapperList);
+
+            if(connectionWrapper != null && connectionWrapper.getCount() < CORE_CHANNEL_NUM){//若有可用
+                return connectionWrapper;
+            }else{//否则，直接创建conn
+                Connection conn = RabbitConnectionFactory.createConnection(rabbitConfig.getCurrentCluster(),rabbitConfig);
+                connectionWrapper = new ConnectionWrapper(conn);
+                connectionWrapperList.add(connectionWrapper);
+                return connectionWrapper;
             }
-            //否则，直接创建conn
-            connectionWrapperMapping.put(cluster,new ArrayList<ConnectionWrapper>());
-            Connection conn = RabbitConnectionFactory.createConnection(cluster,rabbitConfig);
-            ConnectionWrapper connectionWrapper = new ConnectionWrapper(conn);
-            connectionWrapperMapping.get(cluster).add(connectionWrapper);
-            return connectionWrapper;
         } catch (Exception e) {
             throw new RuntimeException("create rabbit conn failed:" + e);
         }
     }
 
     /**
-     * 从现有连接中获取channel数未达到最大值的conn wrapper
+     * 从现有连接中获取channel数最小conn wrapper
      * @param connectionWrapperList
      * @return
      */
-    static ConnectionWrapper getAvailableConnectionWrapper(List<ConnectionWrapper> connectionWrapperList){
+    static ConnectionWrapper getConnectionWrapperByMinChannelCount(List<ConnectionWrapper> connectionWrapperList){
         // 获取连接池中Channel数量最小的连接
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
                 .findFirst().get();
