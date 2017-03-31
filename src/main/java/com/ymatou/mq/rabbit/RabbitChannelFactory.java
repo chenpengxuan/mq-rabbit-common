@@ -2,11 +2,9 @@ package com.ymatou.mq.rabbit;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
-import com.ymatou.mq.infrastructure.model.Message;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.ChannelWrapper;
 import com.ymatou.mq.rabbit.support.ConnectionWrapper;
-import com.ymatou.mq.rabbit.support.RabbitAckHandler;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
 
 import org.slf4j.Logger;
