@@ -37,6 +37,11 @@ public class ChannelWrapper {
      */
     private Thread thread;
 
+    /**
+     * 当前channel所属connection wrapper
+     */
+    private ConnectionWrapper connectionWrapper;
+
     public ChannelWrapper(Channel channel){
         this.channel = channel;
     }
@@ -88,5 +93,13 @@ public class ChannelWrapper {
 
     public void setThread(Thread thread) {
         this.thread = thread;
+    }
+
+    public ConnectionWrapper getConnectionWrapper() {
+        return connectionWrapper;
+    }
+
+    public void setConnectionWrapper(ConnectionWrapper connectionWrapper) {
+        this.connectionWrapper = connectionWrapper;
     }
 }

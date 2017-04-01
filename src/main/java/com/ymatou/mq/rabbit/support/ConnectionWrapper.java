@@ -39,10 +39,18 @@ public class ConnectionWrapper {
     }
 
     /**
-     * 增加使用计数
+     * 计数+1
      */
     public int incCount() {
         return count.incrementAndGet();
+    }
+
+    /**
+     * 计数-1
+     * @return
+     */
+    public int decCount() {
+        return count.decrementAndGet();
     }
 
 }
