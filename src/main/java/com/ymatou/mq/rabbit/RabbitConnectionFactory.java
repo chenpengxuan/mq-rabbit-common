@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -45,7 +46,7 @@ public class RabbitConnectionFactory {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
         //创建连接
-        Connection conn = connectionFactory.newConnection(new AddressResolver() {
+        AddressResolver addressResolver = new AddressResolver() {
             @Override
             public List<Address> getAddresses() throws IOException {
                 List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
@@ -58,8 +59,14 @@ public class RabbitConnectionFactory {
                 }
                 return addressList;
             }
-        });
-        return conn;
+        };
+        if(rabbitConfig.getWorkerThreadNum() > 0){
+            Connection conn = connectionFactory.newConnection(Executors.newFixedThreadPool(rabbitConfig.getWorkerThreadNum()),addressResolver);
+            return conn;
+        }else{
+            Connection conn = connectionFactory.newConnection(addressResolver);
+            return  conn;
+        }
     }
 
     /**

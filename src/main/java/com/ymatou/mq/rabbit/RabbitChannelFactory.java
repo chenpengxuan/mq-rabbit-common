@@ -57,7 +57,16 @@ public class RabbitChannelFactory {
      * @return
      */
     public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig) {
-        if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
+        return getChannelWrapper(rabbitConfig,rabbitConfig.getCurrentCluster());
+    }
+
+    /**
+     * 获取channel wrapper
+     * @param rabbitConfig
+     * @return
+     */
+    public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig,String cluster) {
+        if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
             ChannelWrapper channelWrapper = getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
             logger.debug("getChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channelWrapper.getChannel());
             return channelWrapper;

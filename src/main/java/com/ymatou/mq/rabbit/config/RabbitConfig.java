@@ -56,6 +56,11 @@ public class RabbitConfig {
      */
     private boolean slaveEnable = true;
 
+    /**
+     * rabbit 自定义conn worker线程数量
+     */
+    private int workerThreadNum;
+
     @DisconfFileItem(name = "rabbitmq.primary.address")
     public String getMasterAddress() {
         return masterAddress;
@@ -117,6 +122,14 @@ public class RabbitConfig {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+    public int getWorkerThreadNum() {
+        return workerThreadNum;
+    }
+
+    public void setWorkerThreadNum(int workerThreadNum) {
+        this.workerThreadNum = workerThreadNum;
     }
 
     /**
