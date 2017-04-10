@@ -67,6 +67,7 @@ public class RabbitChannelFactory {
      */
     public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig,String cluster) {
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+            //FIXME:if/else 不同的code block??
             ChannelWrapper channelWrapper = getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
             logger.debug("getChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channelWrapper.getChannel());
             return channelWrapper;
@@ -87,6 +88,8 @@ public class RabbitChannelFactory {
             return channelWrapper;
         }else{
             channelWrapper = RabbitChannelFactory.createChannelWrapper(rabbitConfig);
+
+            //FIXME: 废代码，要么创建成功，要么抛异常
             if(channelWrapper == null){
                 throw new RuntimeException("create channel fail.");
             }
