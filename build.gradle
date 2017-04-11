@@ -1,5 +1,5 @@
 group 'com.ymatou.mq'
-version '1.0.0.2017041002'
+version '1.0.0.2017041101'
 
 apply plugin: 'java'
 apply plugin: "idea"
@@ -29,18 +29,90 @@ compileTestJava {
 }
 
 ext {
+    springDataMongoVersion = "1.9.2.RELEASE"
+    logbackVersion = "1.1.7"
+    slf4jVersion = "1.7.21"
+    springVersion = "4.2.5.RELEASE"
+    commonsLang3Version = "3.4"
+    jodaTimeVerson = "2.9.3"
+    elApiVersion = "2.2"
+
+    mongoDriverVersion = "3.2.2"
+    mongoMorphiaVersion = "1.2.1"
+
+    fastjsonVersion = "1.2.28"
+    guavaVersion = "19.0"
+    springVersion = "4.2.5.RELEASE"
+    httpclientVersion = "4.5.2"
+    httpcoreVersion = "4.4.4"
+    zkclientVersion = "0.1"
+
+    xodusOpenApiVersion = "1.0.4"
+    xodusEnvironmentVersion = "1.0.4"
+
+    //ymatou
+    errorreporterVersion = "1.0.9"
+    performanceMonitorClientVersion = "1.1.5"
+    disconfVersion = "2.6.41"
+
+
+    //test
+    junitVersion = "4.12"
+    jmockitVersion = "1.22"
+    junitToolboxVersion = "2.2"
+
     rabbitMqDriverVersion = "4.1.0"
-    mqInfrastructureVersion = "1.0.0.2017041002"
 }
+
+
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
 
-//    compile(project(":mq-infrastructure"))
+    compile "ch.qos.logback:logback-classic:${logbackVersion}"
+    compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
+    compile "org.slf4j:slf4j-api:${slf4jVersion}"
 
+    compile "org.apache.commons:commons-lang3:${commonsLang3Version}"
+    compile "javax.el:el-api:${elApiVersion}"
+    compile "joda-time:joda-time:${jodaTimeVerson}"
+
+    compile "com.google.guava:guava:${guavaVersion}"
+    compile "org.apache.httpcomponents:httpclient:${httpclientVersion}"
+    compile "org.apache.httpcomponents:httpcore:${httpcoreVersion}"
+
+    compile ("com.github.sgroschupf:zkclient:${zkclientVersion}"){
+        exclude group: 'org.apache.zookeeper', module: 'zookeeper'
+    }
+
+    compile "org.jetbrains.xodus:xodus-openAPI:${xodusOpenApiVersion}"
+    compile "org.jetbrains.xodus:xodus-environment:${xodusEnvironmentVersion}"
+
+    //mongo
+    compile "org.mongodb:mongo-java-driver:${mongoDriverVersion}"
+    compile "org.mongodb.morphia:morphia:${mongoMorphiaVersion}"
+
+    //spring
+    compile "org.springframework:spring-context:${springVersion}"
+    compile "org.springframework:spring-context-support:${springVersion}"
+    compile "org.springframework:spring-orm:${springVersion}"
+    compile "org.springframework:spring-aspects:${springVersion}"
+    compile "org.springframework.data:spring-data-mongodb:${springDataMongoVersion}"
+
+    //rabbit
     compile "com.rabbitmq:amqp-client:${rabbitMqDriverVersion}"
 
-    compile "com.ymatou.mq:mq-infrastructure:${mqInfrastructureVersion}"
+    //ymatou
+    compile "com.ymatou:performancemonitorclient:${performanceMonitorClientVersion}"
+    compile "com.ymatou.errorreporter:errorreporter-logback:${errorreporterVersion}"
+    compile "com.ymatou.disconf:disconf-client:${disconfVersion}"
+
+    //test
+    compile "org.jmockit:jmockit:${jmockitVersion}"
+    compile "junit:junit:${junitVersion}"
+    compile "org.springframework:spring-test:${springVersion}"
+    compile "com.googlecode.junit-toolbox:junit-toolbox:${junitToolboxVersion}"
+
 }
 
 //上传到nexus

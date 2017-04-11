@@ -5,7 +5,6 @@ import com.rabbitmq.client.ConfirmListener;
 import com.rabbitmq.client.Recoverable;
 import com.rabbitmq.client.RecoveryListener;
 import com.rabbitmq.client.impl.recovery.AutorecoveringChannel;
-import com.ymatou.mq.infrastructure.model.Message;
 import com.ymatou.mq.rabbit.RabbitChannelFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +29,7 @@ public class ChannelWrapper {
     /**
      * 未确认集合
      */
-    private SortedMap<Long, Message> unconfirmedSet;
+    private SortedMap<Long, Object> unconfirmedSet;
 
     /**
      * 当前channel所在线程
@@ -66,7 +65,7 @@ public class ChannelWrapper {
         }
     }
 
-    public ChannelWrapper(Channel channel,SortedMap<Long, Message> unconfirmedSet){
+    public ChannelWrapper(Channel channel,SortedMap<Long, Object> unconfirmedSet){
         this.channel = channel;
         this.unconfirmedSet = unconfirmedSet;
     }
@@ -79,11 +78,11 @@ public class ChannelWrapper {
         this.channel = channel;
     }
 
-    public SortedMap<Long, Message> getUnconfirmedSet() {
+    public SortedMap<Long, Object> getUnconfirmedSet() {
         return unconfirmedSet;
     }
 
-    public void setUnconfirmedSet(SortedMap<Long, Message> unconfirmedSet) {
+    public void setUnconfirmedSet(SortedMap<Long, Object> unconfirmedSet) {
         this.unconfirmedSet = unconfirmedSet;
     }
 
