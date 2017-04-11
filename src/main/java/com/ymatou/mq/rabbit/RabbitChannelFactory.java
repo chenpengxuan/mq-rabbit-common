@@ -14,6 +14,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.*;
 
 /**
+ * FIXME:这个核心工厂类需要足够多的并发单元测试用例
  * rabbit channel创建工厂
  * Created by zhangzhihua on 2017/3/24.
  */
@@ -21,6 +22,7 @@ public class RabbitChannelFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(RabbitChannelFactory.class);
 
+    //FIXME:配置化，方便调优
     /**
      * 一个conn正常允许创建的channel数目，若conn超过最大数则conn.channel数可超过这个数目
      */
@@ -67,6 +69,7 @@ public class RabbitChannelFactory {
      */
     public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig,String cluster) {
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+            //FIXME:if/else 不同的code block??
             ChannelWrapper channelWrapper = getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
             logger.debug("getChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channelWrapper.getChannel());
             return channelWrapper;
@@ -87,6 +90,8 @@ public class RabbitChannelFactory {
             return channelWrapper;
         }else{
             channelWrapper = RabbitChannelFactory.createChannelWrapper(rabbitConfig);
+
+            //FIXME: 废代码，要么创建成功，要么抛异常
             if(channelWrapper == null){
                 throw new RuntimeException("create channel fail.");
             }
@@ -103,6 +108,8 @@ public class RabbitChannelFactory {
         try {
             //获取conn
             ConnectionWrapper connectionWrapper = getConnectionWrapper(rabbitConfig);
+
+            //FIXME:废代码
             if(connectionWrapper == null){
                 throw new RuntimeException("create rabbit conn failed.");
             }
@@ -161,6 +168,7 @@ public class RabbitChannelFactory {
                 }
             }
         } catch (Exception e) {
+            //FIXME:是", e" 而不是" + e"
             throw new RuntimeException("create rabbit conn failed:" + e);
         }
     }
@@ -174,6 +182,8 @@ public class RabbitChannelFactory {
         if(CollectionUtils.isEmpty(connectionWrapperList)){
             return null;
         }
+
+        //FIXME:不要每次选取时都排序一次，往connectionList添加时主动sort一次? 注意刚添加，还未sort的瞬间并发
         // 按channel数排序并取第一个
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
                 .findFirst().get();
@@ -190,6 +200,7 @@ public class RabbitChannelFactory {
      * @return
      */
     static ConnectionWrapper getConnectionWrapperOfHasMinChannels(List<ConnectionWrapper> connectionWrapperList){
+        //FIXME:不要每次选取时都排序一次，往connectionList添加时主动sort一次? 注意刚添加，还未sort的瞬间并发
         // 按channel数排序并取第一个
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getCount))
                 .findFirst().get();

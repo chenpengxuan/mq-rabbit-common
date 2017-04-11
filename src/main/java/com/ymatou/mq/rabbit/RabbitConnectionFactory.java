@@ -51,6 +51,8 @@ public class RabbitConnectionFactory {
             public List<Address> getAddresses() throws IOException {
                 List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
                 Collections.shuffle(addressList);
+
+                //FIXME:直接logger.debug(addressList)
                 if(!CollectionUtils.isEmpty(addressList)){
                     logger.debug("rabbit ip/port list...");
                     for(Address address:addressList){
@@ -83,6 +85,8 @@ public class RabbitConnectionFactory {
             factory.setPassword(rabbitConfig.getPassword());
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
+
+            //FIXME:默认的不行吗
             factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread"));
             connFactoryMapping.put(cluster,factory);
             return factory;
@@ -104,6 +108,7 @@ public class RabbitConnectionFactory {
     }
 
     /**
+     * FIXME:要更严谨些，必要的trim处理。" 10.10.10.1:4567 ; 10.10.10.2:4567"应该是合法的
      * 将url转换为address列表
      * @param url
      * @return
