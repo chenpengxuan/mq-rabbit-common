@@ -13,11 +13,10 @@ public class ConnectionWrapper {
 
     private Connection connection;
 
-    //FIXME: rename with channelCount
     /**
      * 该conn下channel数目
      */
-    private AtomicInteger count = new AtomicInteger(0);
+    private AtomicInteger channelCount = new AtomicInteger(0);
 
     public ConnectionWrapper(Connection connection){
         this.connection = connection;
@@ -36,15 +35,15 @@ public class ConnectionWrapper {
      *
      * @return
      */
-    public int getCount() {
-        return count.intValue();
+    public int getChannelCount() {
+        return channelCount.intValue();
     }
 
     /**
      * 计数+1
      */
     public int incCount() {
-        return count.incrementAndGet();
+        return channelCount.incrementAndGet();
     }
 
     /**
@@ -52,7 +51,7 @@ public class ConnectionWrapper {
      * @return
      */
     public int decCount() {
-        return count.decrementAndGet();
+        return channelCount.decrementAndGet();
     }
 
 }

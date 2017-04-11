@@ -51,14 +51,7 @@ public class RabbitConnectionFactory {
             public List<Address> getAddresses() throws IOException {
                 List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
                 Collections.shuffle(addressList);
-
-                //FIXME:直接logger.debug(addressList)
-                if(!CollectionUtils.isEmpty(addressList)){
-                    logger.debug("rabbit ip/port list...");
-                    for(Address address:addressList){
-                        logger.debug("ip:{},port:{}",address.getHost(),address.getPort());
-                    }
-                }
+                logger.debug("rabbit addressList:" + addressList);
                 return addressList;
             }
         };
