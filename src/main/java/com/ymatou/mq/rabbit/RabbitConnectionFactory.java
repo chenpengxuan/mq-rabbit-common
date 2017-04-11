@@ -117,6 +117,7 @@ public class RabbitConnectionFactory {
         List<Address> addressList = new ArrayList<Address>();
         String[] arr = url.split(";");
         for(String item:arr){
+            //FIXME:直接调用Address.parseAddress()，可以支持单机域名
             String[] str = item.split(":");
             Address address = new Address(str[0],Integer.parseInt(str[1]));
             addressList.add(address);
