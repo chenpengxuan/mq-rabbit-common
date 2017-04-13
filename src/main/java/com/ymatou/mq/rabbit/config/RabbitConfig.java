@@ -44,19 +44,6 @@ public class RabbitConfig {
     private String virtualHost;
 
     /**
-     * FIXME:以下两项移至receiver biz.properties，只在receiver才有效
-     */
-    /**
-     * 是否开启master集群，默认开启
-     */
-    private boolean masterEnable = true;
-
-    /**
-     * 是否开启slave集群，默认开启
-     */
-    private boolean slaveEnable = true;
-
-    /**
      * rabbit 自定义conn worker线程数量
      */
     private int workerThreadNum;
@@ -77,24 +64,6 @@ public class RabbitConfig {
 
     public void setSlaveAddress(String slaveAddress) {
         this.slaveAddress = slaveAddress;
-    }
-
-    @DisconfFileItem(name = "rabbitmq.master.enable")
-    public boolean isMasterEnable() {
-        return masterEnable;
-    }
-
-    public void setMasterEnable(boolean masterEnable) {
-        this.masterEnable = masterEnable;
-    }
-
-    @DisconfFileItem(name = "rabbitmq.slave.enable")
-    public boolean isSlaveEnable() {
-        return slaveEnable;
-    }
-
-    public void setSlaveEnable(boolean slaveEnable) {
-        this.slaveEnable = slaveEnable;
     }
 
     @DisconfFileItem(name = "rabbitmq.virtual.host")
@@ -130,19 +99,5 @@ public class RabbitConfig {
 
     public void setWorkerThreadNum(int workerThreadNum) {
         this.workerThreadNum = workerThreadNum;
-    }
-
-    /**
-     * 获取当前集群
-     * @return
-     */
-    public String getCurrentCluster(){
-        if(masterEnable){
-            return RabbitConstants.CLUSTER_MASTER;
-        }else if(slaveEnable){
-            return RabbitConstants.CLUSTER_SLAVE;
-        }else{
-            return null;
-        }
     }
 }

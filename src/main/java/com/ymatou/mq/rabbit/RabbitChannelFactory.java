@@ -63,38 +63,28 @@ public class RabbitChannelFactory {
      * @param rabbitConfig
      * @return
      */
-    public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig) {
-        return getChannelWrapper(rabbitConfig,rabbitConfig.getCurrentCluster());
-    }
-
-    /**
-     * 获取channel wrapper
-     * @param rabbitConfig
-     * @return
-     */
-    public static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig,String cluster) {
+    public static ChannelWrapper getChannelWrapper(String cluster, RabbitConfig rabbitConfig) {
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
-            //FIXME:if/else 不同的code block??
-            ChannelWrapper channelWrapper = getChannelWrapper(rabbitConfig, masterChannelWrapperHolder);
-            logger.debug("getChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channelWrapper.getChannel());
-            return channelWrapper;
+            return getChannelWrapper(cluster, rabbitConfig, masterChannelWrapperHolder);
         }else{
-            return getChannelWrapper(rabbitConfig,slaveChannelWrapperHolder);
+            return getChannelWrapper(cluster, rabbitConfig, slaveChannelWrapperHolder);
         }
     }
 
     /**
      * 获取channel wrapper
+     *
+     * @param cluster
      * @param rabbitConfig
      * @param channelWrapperHolder
      * @return
      */
-    static ChannelWrapper getChannelWrapper(RabbitConfig rabbitConfig, ThreadLocal<ChannelWrapper> channelWrapperHolder){
+    static ChannelWrapper getChannelWrapper(String cluster, RabbitConfig rabbitConfig, ThreadLocal<ChannelWrapper> channelWrapperHolder){
         ChannelWrapper channelWrapper = channelWrapperHolder.get();
         if(channelWrapper != null){
             return channelWrapper;
         }else{
-            channelWrapper = RabbitChannelFactory.createChannelWrapper(rabbitConfig);
+            channelWrapper = RabbitChannelFactory.createChannelWrapper(cluster, rabbitConfig);
             channelWrapperHolder.set(channelWrapper);
             return channelWrapper;
         }
@@ -104,10 +94,10 @@ public class RabbitChannelFactory {
      * 创建生产通道
      * @return
      */
-    public static ChannelWrapper createChannelWrapper(RabbitConfig rabbitConfig){
+    public static ChannelWrapper createChannelWrapper(String cluster, RabbitConfig rabbitConfig){
         try {
             //获取conn
-            ConnectionWrapper connectionWrapper = getConnectionWrapper(rabbitConfig);
+            ConnectionWrapper connectionWrapper = getConnectionWrapper(cluster, rabbitConfig);
 
             Connection connection = connectionWrapper.getConnection();
             //创建channel
@@ -133,24 +123,28 @@ public class RabbitChannelFactory {
 
     /**
      * 获取conn wrapper
+     *
+     * @param cluster
      * @param rabbitConfig
      * @return
      */
-    static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig){
-        if(RabbitConstants.CLUSTER_MASTER.equals(rabbitConfig.getCurrentCluster())){
-            return getConnectionWrapper(rabbitConfig,masterConnectionWrapperList);
+    static ConnectionWrapper getConnectionWrapper(String cluster, RabbitConfig rabbitConfig){
+        if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+            return getConnectionWrapper(cluster, rabbitConfig, masterConnectionWrapperList);
         }else{
-            return getConnectionWrapper(rabbitConfig,slaveConnectionWrapperList);
+            return getConnectionWrapper(cluster, rabbitConfig, slaveConnectionWrapperList);
         }
     }
 
     /**
      * 获取ConnectionWrapper
+     *
+     * @param cluster
      * @param rabbitConfig
      * @param connectionWrapperList
      * @return
      */
-    static ConnectionWrapper getConnectionWrapper(RabbitConfig rabbitConfig,List<ConnectionWrapper> connectionWrapperList){
+    static ConnectionWrapper getConnectionWrapper(String cluster, RabbitConfig rabbitConfig, List<ConnectionWrapper> connectionWrapperList){
         try {
             //从现有连接中获取可用的conn wrapper
             ConnectionWrapper connectionWrapper = getConnectionWrapperOfHasAvailableChannels(connectionWrapperList);
@@ -159,7 +153,7 @@ public class RabbitChannelFactory {
                 return connectionWrapper;
             }else{//否则
                 if(connectionWrapperList.size() < MAX_CONNECTION_NUM){//若连接数未达上限，则直接创建
-                    Connection connection = RabbitConnectionFactory.createConnection(rabbitConfig.getCurrentCluster(),rabbitConfig);
+                    Connection connection = RabbitConnectionFactory.createConnection(cluster,rabbitConfig);
                     connectionWrapper = new ConnectionWrapper(connection);
                     connectionWrapperList.add(connectionWrapper);
                     return connectionWrapper;
