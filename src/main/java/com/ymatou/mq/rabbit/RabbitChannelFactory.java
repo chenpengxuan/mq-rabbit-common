@@ -54,6 +54,11 @@ public class RabbitChannelFactory {
     private static ThreadLocal<ChannelWrapper> slaveChannelWrapperHolder = new ThreadLocal<ChannelWrapper>();
 
     /**
+     * channel wrapper列表
+     */
+    private static List<ChannelWrapper> channelWrapperList = Collections.synchronizedList(new ArrayList<ChannelWrapper>());
+
+    /**
      * 获取channel wrapper
      * @param rabbitConfig
      * @return
@@ -90,7 +95,6 @@ public class RabbitChannelFactory {
             return channelWrapper;
         }else{
             channelWrapper = RabbitChannelFactory.createChannelWrapper(rabbitConfig);
-
             channelWrapperHolder.set(channelWrapper);
             return channelWrapper;
         }
@@ -119,6 +123,7 @@ public class RabbitChannelFactory {
             channelWrapper.setThread(Thread.currentThread());
             //添加recovery监听
             channelWrapper.addRecoveryListener();
+            channelWrapperList.add(channelWrapper);
 
             return channelWrapper;
         } catch (Exception e) {
@@ -199,6 +204,10 @@ public class RabbitChannelFactory {
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount))
                 .findFirst().get();
         return connectionWrapper;
+    }
+
+    public static List<ChannelWrapper> getChannelWrapperList() {
+        return channelWrapperList;
     }
 
 }
