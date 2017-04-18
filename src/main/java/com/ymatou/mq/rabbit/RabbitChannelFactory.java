@@ -22,17 +22,6 @@ public class RabbitChannelFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(RabbitChannelFactory.class);
 
-    //FIXME:配置化，方便调优
-    /**
-     * 一个conn正常允许创建的channel数目，若conn超过最大数则conn.channel数可超过这个数目
-     */
-    private static final int CORE_CHANNEL_NUM = 50;
-
-    /**
-     * 最大允许创建连接数
-     */
-    private static final int MAX_CONNECTION_NUM = 100;
-
     /**
      * master conn wrapper列表
      */
@@ -147,18 +136,18 @@ public class RabbitChannelFactory {
     static ConnectionWrapper getConnectionWrapper(String cluster, RabbitConfig rabbitConfig, List<ConnectionWrapper> connectionWrapperList){
         try {
             //从现有连接中获取可用的conn wrapper
-            ConnectionWrapper connectionWrapper = getConnectionWrapperOfHasAvailableChannels(connectionWrapperList);
+            ConnectionWrapper connectionWrapper = getConnectionWrapperOfHasAvailableChannels(connectionWrapperList,rabbitConfig);
 
             if(connectionWrapper != null){//若有可用
                 return connectionWrapper;
             }else{//否则
-                if(connectionWrapperList.size() < MAX_CONNECTION_NUM){//若连接数未达上限，则直接创建
+                if(connectionWrapperList.size() < rabbitConfig.getMaxConnectionNum()){//若连接数未达上限，则直接创建
                     Connection connection = RabbitConnectionFactory.createConnection(cluster,rabbitConfig);
                     connectionWrapper = new ConnectionWrapper(connection);
                     connectionWrapperList.add(connectionWrapper);
                     return connectionWrapper;
                 }else{//若连接数已达上限，则从现有连接中选择channel数目最小的
-                    return getConnectionWrapperOfHasMinChannels(connectionWrapperList);
+                    return getConnectionWrapperOfHasMinChannels(connectionWrapperList,rabbitConfig);
                 }
             }
         } catch (Exception e) {
@@ -171,7 +160,7 @@ public class RabbitChannelFactory {
      * @param connectionWrapperList
      * @return
      */
-    static ConnectionWrapper getConnectionWrapperOfHasAvailableChannels(List<ConnectionWrapper> connectionWrapperList){
+    static ConnectionWrapper getConnectionWrapperOfHasAvailableChannels(List<ConnectionWrapper> connectionWrapperList,RabbitConfig rabbitConfig){
         if(CollectionUtils.isEmpty(connectionWrapperList)){
             return null;
         }
@@ -181,7 +170,7 @@ public class RabbitChannelFactory {
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount))
                 .findFirst().get();
         //若不超过指定数量，则返回
-        if(connectionWrapper.getChannelCount() < CORE_CHANNEL_NUM){
+        if(connectionWrapper.getChannelCount() < rabbitConfig.getCoreChannelNum()){
             return  connectionWrapper;
         }
         return null;
@@ -192,7 +181,7 @@ public class RabbitChannelFactory {
      * @param connectionWrapperList
      * @return
      */
-    static ConnectionWrapper getConnectionWrapperOfHasMinChannels(List<ConnectionWrapper> connectionWrapperList){
+    static ConnectionWrapper getConnectionWrapperOfHasMinChannels(List<ConnectionWrapper> connectionWrapperList,RabbitConfig rabbitConfig){
         //FIXME:不要每次选取时都排序一次，往connectionList添加时主动sort一次? 注意刚添加，还未sort的瞬间并发
         // 按channel数排序并取第一个
         ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount))

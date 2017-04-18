@@ -44,9 +44,19 @@ public class RabbitConfig {
     private String virtualHost;
 
     /**
-     * rabbit 自定义conn worker线程数量
+     * 自定义conn worker线程数量
      */
     private int workerThreadNum;
+
+    /**
+     * 允许最大连接数目
+     */
+    private int maxConnectionNum;
+
+    /**
+     * 一个conn正常允许创建的channel数目，若conn超过最大数则conn.channel数可超过这个数目
+     */
+    private int coreChannelNum;
 
     @DisconfFileItem(name = "rabbitmq.primary.address")
     public String getMasterAddress() {
@@ -93,11 +103,30 @@ public class RabbitConfig {
         this.userName = userName;
     }
 
+    @DisconfFileItem(name = "worker.thread.num")
     public int getWorkerThreadNum() {
         return workerThreadNum;
     }
 
     public void setWorkerThreadNum(int workerThreadNum) {
         this.workerThreadNum = workerThreadNum;
+    }
+
+    @DisconfFileItem(name = "max.connection.num")
+    public int getMaxConnectionNum() {
+        return maxConnectionNum;
+    }
+
+    public void setMaxConnectionNum(int maxConnectionNum) {
+        this.maxConnectionNum = maxConnectionNum;
+    }
+
+    @DisconfFileItem(name = "core.channel.num")
+    public int getCoreChannelNum() {
+        return coreChannelNum;
+    }
+
+    public void setCoreChannelNum(int coreChannelNum) {
+        this.coreChannelNum = coreChannelNum;
     }
 }
