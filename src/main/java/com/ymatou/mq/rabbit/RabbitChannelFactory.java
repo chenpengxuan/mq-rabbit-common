@@ -105,9 +105,30 @@ public class RabbitChannelFactory {
             channelWrapper.addRecoveryListener();
             channelWrapperList.add(channelWrapper);
 
+            //当channel变化如创建时，排序connectionWrapperList
+            if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+                sortConnectionWrapperList(masterConnectionWrapperList);
+            }else{
+                sortConnectionWrapperList(slaveConnectionWrapperList);
+            }
             return channelWrapper;
         } catch (Exception e) {
             throw new RuntimeException("create rabbit channel failed.",e);
+        }
+    }
+
+    /**
+     * 关闭channel
+     * @param channel
+     */
+    public static void closeChannel(Channel channel){
+        //TODO 关闭channel并处理conn-channel关系
+        String cluster = "";
+        //当channel变化如创建时，排序connectionWrapperList
+        if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+            sortConnectionWrapperList(masterConnectionWrapperList);
+        }else{
+            sortConnectionWrapperList(slaveConnectionWrapperList);
         }
     }
 
@@ -141,7 +162,7 @@ public class RabbitChannelFactory {
 
             if(connectionWrapper != null){//若有可用
                 return connectionWrapper;
-            }else{//否则
+            }else{//若没有可用
                 if(connectionWrapperList.size() < rabbitConfig.getMaxConnectionNum()){//若连接数未达上限，则直接创建
                     Connection connection = RabbitConnectionFactory.createConnection(cluster,rabbitConfig);
                     connectionWrapper = new ConnectionWrapper(connection);
@@ -166,10 +187,8 @@ public class RabbitChannelFactory {
             return null;
         }
 
-        //FIXME:不要每次选取时都排序一次，往connectionList添加时主动sort一次? 注意刚添加，还未sort的瞬间并发
         // 按channel数排序并取第一个
-        ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount))
-                .findFirst().get();
+        ConnectionWrapper connectionWrapper = connectionWrapperList.get(0);
         //若不超过指定数量，则返回
         if(connectionWrapper.getChannelCount() < rabbitConfig.getCoreChannelNum()){
             return  connectionWrapper;
@@ -183,11 +202,17 @@ public class RabbitChannelFactory {
      * @return
      */
     static ConnectionWrapper getConnectionWrapperOfHasMinChannels(List<ConnectionWrapper> connectionWrapperList,RabbitConfig rabbitConfig){
-        //FIXME:不要每次选取时都排序一次，往connectionList添加时主动sort一次? 注意刚添加，还未sort的瞬间并发
         // 按channel数排序并取第一个
-        ConnectionWrapper connectionWrapper = connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount))
-                .findFirst().get();
+        ConnectionWrapper connectionWrapper = connectionWrapperList.get(0);
         return connectionWrapper;
+    }
+
+    /**
+     * 对connWrapperList按持有channel数量倒序排序
+     * @param connectionWrapperList
+     */
+    static void sortConnectionWrapperList(List<ConnectionWrapper> connectionWrapperList){
+        connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount));
     }
 
     public static List<ChannelWrapper> getChannelWrapperList() {

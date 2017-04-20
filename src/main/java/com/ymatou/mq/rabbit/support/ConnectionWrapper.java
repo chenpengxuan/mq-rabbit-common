@@ -5,11 +5,10 @@ import com.rabbitmq.client.Connection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * FIXME: 基于count实现Comparable
  * 连接wrapper，主要用于计channel数目
  * Created by zhangzhihua on 2017/3/28.
  */
-public class ConnectionWrapper {
+public class ConnectionWrapper implements Comparable{
 
     private Connection connection;
 
@@ -54,4 +53,9 @@ public class ConnectionWrapper {
         return channelCount.decrementAndGet();
     }
 
+    @Override
+    public int compareTo(Object o) {
+        ConnectionWrapper c1 = (ConnectionWrapper)o;
+        return (c1.getChannelCount() - this.getChannelCount());
+    }
 }
