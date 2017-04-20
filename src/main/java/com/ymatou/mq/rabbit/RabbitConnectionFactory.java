@@ -51,7 +51,7 @@ public class RabbitConnectionFactory {
             public List<Address> getAddresses() throws IOException {
                 List<Address> addressList = getRabbitAddresses(cluster,rabbitConfig);
                 Collections.shuffle(addressList);
-                logger.debug("rabbit addressList:" + addressList);
+                logger.debug("rabbit addressList:{}",addressList);
                 return addressList;
             }
         };
@@ -100,18 +100,17 @@ public class RabbitConnectionFactory {
     }
 
     /**
-     * FIXME:要更严谨些，必要的trim处理。" 10.10.10.1:4567 ; 10.10.10.2:4567"应该是合法的
      * 将url转换为address列表
      * @param url
      * @return
      */
     static List<Address> toAddresses(String url){
         List<Address> addressList = new ArrayList<Address>();
-        String[] arr = url.split(";");
+        String[] arr = url.trim().split(";");
         for(String item:arr){
-            //FIXME:直接调用Address.parseAddress()，可以支持单机域名
-            String[] str = item.split(":");
-            Address address = new Address(str[0],Integer.parseInt(str[1]));
+            //String[] str = item.split(":");
+            //Address address = new Address(str[0],Integer.parseInt(str[1]));
+            Address address = Address.parseAddress(item);
             addressList.add(address);
         }
         return addressList;

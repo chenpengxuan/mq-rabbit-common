@@ -92,7 +92,6 @@ public class RabbitChannelFactory {
             //创建channel
             Channel channel = connection.createChannel();
 
-            //FIXME producer 没有必要设置
             channel.basicQos(1);
             logger.debug("createChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channel.hashCode());
             //设置conn.channel数目+1
