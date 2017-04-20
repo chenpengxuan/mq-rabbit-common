@@ -79,7 +79,6 @@ public class RabbitConnectionFactory {
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
 
-            //FIXME:默认的不行吗
             factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread"));
             connFactoryMapping.put(cluster,factory);
             return factory;
