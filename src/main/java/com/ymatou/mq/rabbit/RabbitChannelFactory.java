@@ -11,7 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 /**
  * FIXME:这个核心工厂类需要足够多的并发单元测试用例
@@ -118,12 +120,23 @@ public class RabbitChannelFactory {
     }
 
     /**
-     * 关闭channel
-     * @param channel
+     * 释放channel wrapper
+     * @param cluster
      */
-    public static void closeChannel(Channel channel){
-        //TODO 关闭channel并处理conn-channel关系
-        String cluster = "";
+    public static void releaseChannelWrapper(String cluster, ChannelWrapper channelWrapper){
+        //关闭channel
+        Channel channel = channelWrapper.getChannel();
+        if(channel != null && channel.isOpen()){
+            try {
+                channel.close();
+            } catch (Exception e) {
+                logger.error("close channel error.",e);
+            }
+        }
+
+        //减计数
+        channelWrapper.getConnectionWrapper().decCount();
+
         //当channel变化如创建时，排序connectionWrapperList
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
             sortConnectionWrapperList(masterConnectionWrapperList);
