@@ -11,9 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * FIXME:这个核心工厂类需要足够多的并发单元测试用例
@@ -45,9 +44,14 @@ public class RabbitChannelFactory {
     private static ThreadLocal<ChannelWrapper> slaveChannelWrapperHolder = new ThreadLocal<ChannelWrapper>();
 
     /**
-     * channel wrapper列表
+     * master channel wrapper列表
      */
-    private static List<ChannelWrapper> channelWrapperList = Collections.synchronizedList(new ArrayList<ChannelWrapper>());
+    private static List<ChannelWrapper> masterChannelWrapperList = Collections.synchronizedList(new CopyOnWriteArrayList<ChannelWrapper>());
+
+    /**
+     * slave channel wrapper列表
+     */
+    private static List<ChannelWrapper> slaveChannelWrapperList = Collections.synchronizedList(new CopyOnWriteArrayList<ChannelWrapper>());
 
     /**
      * 获取channel wrapper
@@ -105,7 +109,12 @@ public class RabbitChannelFactory {
             channelWrapper.setThread(Thread.currentThread());
             //添加recovery监听
             channelWrapper.addRecoveryListener();
-            channelWrapperList.add(channelWrapper);
+            //添加到channelWrapper列表
+            if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+                masterChannelWrapperList.add(channelWrapper);
+            }else{
+                slaveChannelWrapperList.add(channelWrapper);
+            }
 
             //当channel变化如创建时，排序connectionWrapperList
             if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
@@ -136,6 +145,13 @@ public class RabbitChannelFactory {
 
         //减计数
         channelWrapper.getConnectionWrapper().decCount();
+
+        //从channelWrapper列表移除
+        if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+            masterChannelWrapperList.remove(channelWrapper);
+        }else{
+            slaveChannelWrapperList.remove(channelWrapper);
+        }
 
         //当channel变化如创建时，排序connectionWrapperList
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
@@ -228,8 +244,20 @@ public class RabbitChannelFactory {
         connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount));
     }
 
-    public static List<ChannelWrapper> getChannelWrapperList() {
-        return channelWrapperList;
+    public static List<ChannelWrapper> getMasterChannelWrapperList() {
+        return masterChannelWrapperList;
+    }
+
+    public static List<ChannelWrapper> getSlaveChannelWrapperList() {
+        return slaveChannelWrapperList;
+    }
+
+    public static List<ChannelWrapper> getChannelWrapperList(String cluster) {
+        if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
+            return getMasterChannelWrapperList();
+        }else{
+            return getSlaveChannelWrapperList();
+        }
     }
 
 }
