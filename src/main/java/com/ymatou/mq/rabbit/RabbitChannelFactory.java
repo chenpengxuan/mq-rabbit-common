@@ -146,6 +146,7 @@ public class RabbitChannelFactory {
         //减计数
         channelWrapper.getConnectionWrapper().decCount();
 
+        //FIXME: masterChannelWrapperHolder/slaveChannelWrapperHolder不需要清理？？
         //从channelWrapper列表移除
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
             masterChannelWrapperList.remove(channelWrapper);
