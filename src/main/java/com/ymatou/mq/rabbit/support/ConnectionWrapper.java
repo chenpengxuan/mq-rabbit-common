@@ -55,7 +55,8 @@ public class ConnectionWrapper implements Comparable{
 
     @Override
     public int compareTo(Object o) {
-        ConnectionWrapper c1 = (ConnectionWrapper)o;
-        return (c1.getChannelCount() - this.getChannelCount());
+        //desc
+        ConnectionWrapper target = (ConnectionWrapper)o;
+        return (this.getChannelCount()-target.getChannelCount());
     }
 }

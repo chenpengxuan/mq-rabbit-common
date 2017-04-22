@@ -217,7 +217,7 @@ public class RabbitChannelFactory {
             return null;
         }
 
-        // 按channel数排序并取第一个
+        // 按channel数倒排序取第一个
         ConnectionWrapper connectionWrapper = connectionWrapperList.get(0);
         //若不超过指定数量，则返回
         if(connectionWrapper.getChannelCount() < rabbitConfig.getCoreChannelNum()){
@@ -242,7 +242,12 @@ public class RabbitChannelFactory {
      * @param connectionWrapperList
      */
     static void sortConnectionWrapperList(List<ConnectionWrapper> connectionWrapperList){
-        connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount));
+        //connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount));
+        Collections.sort(connectionWrapperList);
+        logger.debug("all connection num:{}.",connectionWrapperList.size());
+        for(ConnectionWrapper connectionWrapper:connectionWrapperList){
+            logger.debug("current conn channels num:{}.",connectionWrapper.getChannelCount());
+        }
     }
 
     public static List<ChannelWrapper> getMasterChannelWrapperList() {
