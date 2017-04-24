@@ -46,12 +46,12 @@ public class RabbitChannelFactory {
     /**
      * master channel wrapper列表
      */
-    private static List<ChannelWrapper> masterChannelWrapperList = Collections.synchronizedList(new CopyOnWriteArrayList<ChannelWrapper>());
+    private static List<ChannelWrapper> masterChannelWrapperList = new CopyOnWriteArrayList<ChannelWrapper>();
 
     /**
      * slave channel wrapper列表
      */
-    private static List<ChannelWrapper> slaveChannelWrapperList = Collections.synchronizedList(new CopyOnWriteArrayList<ChannelWrapper>());
+    private static List<ChannelWrapper> slaveChannelWrapperList = new CopyOnWriteArrayList<ChannelWrapper>();
 
     /**
      * 获取channel wrapper
