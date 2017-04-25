@@ -26,12 +26,12 @@ public class RabbitChannelFactory {
     /**
      * master conn wrapper列表
      */
-    private static List<ConnectionWrapper> masterConnectionWrapperList = Collections.synchronizedList(new ArrayList<ConnectionWrapper>());
+    private static List<ConnectionWrapper> masterConnectionWrapperList = new CopyOnWriteArrayList<ConnectionWrapper>();
 
     /**
      * slave conn wrapper列表
      */
-    private static List<ConnectionWrapper> slaveConnectionWrapperList = Collections.synchronizedList(new ArrayList<ConnectionWrapper>());
+    private static List<ConnectionWrapper> slaveConnectionWrapperList = new CopyOnWriteArrayList<ConnectionWrapper>();
 
     /**
      * master channel wrapper上下文
@@ -245,8 +245,10 @@ public class RabbitChannelFactory {
         //connectionWrapperList.stream().sorted(Comparator.comparing(ConnectionWrapper::getChannelCount));
         Collections.sort(connectionWrapperList);
         logger.debug("all connection num:{}.",connectionWrapperList.size());
-        for(ConnectionWrapper connectionWrapper:connectionWrapperList){
-            logger.debug("current conn channels num:{}.",connectionWrapper.getChannelCount());
+        if(logger.isDebugEnabled()){
+            for(ConnectionWrapper connectionWrapper:connectionWrapperList){
+                logger.debug("current conn channels num:{}.",connectionWrapper.getChannelCount());
+            }
         }
     }
 
