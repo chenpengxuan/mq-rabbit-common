@@ -1,5 +1,5 @@
 group 'com.ymatou.mq'
-version '1.0.0.2017042702'
+version '1.0.0.2017042703'
 
 apply plugin: 'java'
 apply plugin: "idea"
