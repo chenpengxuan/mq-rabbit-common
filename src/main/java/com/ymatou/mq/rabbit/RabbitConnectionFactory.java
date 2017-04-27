@@ -32,6 +32,11 @@ public class RabbitConnectionFactory {
     private static final Logger logger = LoggerFactory.getLogger(RabbitConnectionFactory.class);
 
     /**
+     * 连接超时时间
+     */
+    private static final int CONNECTION_TIMEOUT = 6000;
+
+    /**
      * 连接工厂映射表
      */
     private static Map<String,ConnectionFactory> connFactoryMapping = new ConcurrentHashMap<String,ConnectionFactory>();
@@ -78,6 +83,7 @@ public class RabbitConnectionFactory {
             factory.setPassword(rabbitConfig.getPassword());
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
+            factory.setConnectionTimeout(CONNECTION_TIMEOUT);
 
             factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread"));
             connFactoryMapping.put(cluster,factory);

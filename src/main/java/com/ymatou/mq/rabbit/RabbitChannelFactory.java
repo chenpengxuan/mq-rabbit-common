@@ -2,6 +2,8 @@ package com.ymatou.mq.rabbit;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
+import com.rabbitmq.client.ShutdownListener;
+import com.rabbitmq.client.ShutdownSignalException;
 import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.ChannelWrapper;
 import com.ymatou.mq.rabbit.support.ConnectionWrapper;
@@ -58,11 +60,11 @@ public class RabbitChannelFactory {
      * @param rabbitConfig
      * @return
      */
-    public static ChannelWrapper getChannelWrapper(String cluster, RabbitConfig rabbitConfig) {
+    public static ChannelWrapper getChannelWrapperByThreadContext(String cluster, RabbitConfig rabbitConfig) {
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
-            return getChannelWrapper(cluster, rabbitConfig, masterChannelWrapperHolder);
+            return getChannelWrapperByThreadContext(cluster, rabbitConfig, masterChannelWrapperHolder);
         }else{
-            return getChannelWrapper(cluster, rabbitConfig, slaveChannelWrapperHolder);
+            return getChannelWrapperByThreadContext(cluster, rabbitConfig, slaveChannelWrapperHolder);
         }
     }
 
@@ -74,9 +76,9 @@ public class RabbitChannelFactory {
      * @param channelWrapperHolder
      * @return
      */
-    static ChannelWrapper getChannelWrapper(String cluster, RabbitConfig rabbitConfig, ThreadLocal<ChannelWrapper> channelWrapperHolder){
+    static ChannelWrapper getChannelWrapperByThreadContext(String cluster, RabbitConfig rabbitConfig, ThreadLocal<ChannelWrapper> channelWrapperHolder){
         ChannelWrapper channelWrapper = channelWrapperHolder.get();
-        if(channelWrapper != null){
+        if(channelWrapper != null && channelWrapper.getChannel() != null && channelWrapper.getChannel().isOpen()){
             return channelWrapper;
         }else{
             channelWrapper = RabbitChannelFactory.createChannelWrapper(cluster, rabbitConfig);
@@ -97,8 +99,14 @@ public class RabbitChannelFactory {
             Connection connection = connectionWrapper.getConnection();
             //创建channel
             Channel channel = connection.createChannel();
-
             channel.basicQos(1);
+            channel.addShutdownListener(new ShutdownListener() {
+                @Override
+                public void shutdownCompleted(ShutdownSignalException cause) {
+                    logger.error("One rabbitmq channel shutdownCompleted ", cause);
+                }
+            });
+
             logger.debug("createChannelWrapper,current thread name:{},thread id:{},channel:{}",Thread.currentThread().getName(),Thread.currentThread().getId(),channel.hashCode());
             //设置conn.channel数目+1
             connectionWrapper.incCount();
@@ -190,7 +198,7 @@ public class RabbitChannelFactory {
             //从现有连接中获取可用的conn wrapper
             ConnectionWrapper connectionWrapper = getConnectionWrapperOfHasAvailableChannels(connectionWrapperList,rabbitConfig);
 
-            if(connectionWrapper != null){//若有可用
+            if(connectionWrapper != null && connectionWrapper.getConnection() != null && connectionWrapper.getConnection().isOpen()){//若有可用
                 return connectionWrapper;
             }else{//若没有可用
                 if(connectionWrapperList.size() < rabbitConfig.getMaxConnectionNum()){//若连接数未达上限，则直接创建
