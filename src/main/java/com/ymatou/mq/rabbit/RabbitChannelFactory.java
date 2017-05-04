@@ -103,7 +103,7 @@ public class RabbitChannelFactory {
             channel.addShutdownListener(new ShutdownListener() {
                 @Override
                 public void shutdownCompleted(ShutdownSignalException cause) {
-                    logger.error("One rabbitmq channel shutdownCompleted ", cause);
+                    logger.warn("One rabbitmq channel shutdownCompleted ", cause);
                 }
             });
 
