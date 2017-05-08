@@ -99,7 +99,6 @@ public class RabbitChannelFactory {
             Connection connection = connectionWrapper.getConnection();
             //创建channel
             Channel channel = connection.createChannel();
-            channel.basicQos(1);
             channel.addShutdownListener(new ShutdownListener() {
                 @Override
                 public void shutdownCompleted(ShutdownSignalException cause) {

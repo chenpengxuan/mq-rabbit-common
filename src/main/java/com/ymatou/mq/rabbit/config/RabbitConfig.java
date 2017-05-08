@@ -58,6 +58,8 @@ public class RabbitConfig {
      */
     private int coreChannelNum;
 
+    private String basicQos;
+
     @DisconfFileItem(name = "rabbitmq.primary.address")
     public String getMasterAddress() {
         return masterAddress;
@@ -128,5 +130,13 @@ public class RabbitConfig {
 
     public void setCoreChannelNum(int coreChannelNum) {
         this.coreChannelNum = coreChannelNum;
+    }
+
+    public String getBasicQos() {
+        return basicQos;
+    }
+
+    public void setBasicQos(String basicQos) {
+        this.basicQos = basicQos;
     }
 }
