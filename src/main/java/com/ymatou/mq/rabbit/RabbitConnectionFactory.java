@@ -37,6 +37,11 @@ public class RabbitConnectionFactory {
     private static final int CONNECTION_TIMEOUT = 6000;
 
     /**
+     * 响应超时时间
+     */
+    private static final int CHANNEL_RPC_TIMEOUT = 3000;
+
+    /**
      * 连接工厂映射表
      */
     private static Map<String,ConnectionFactory> connFactoryMapping = new ConcurrentHashMap<String,ConnectionFactory>();
@@ -84,6 +89,7 @@ public class RabbitConnectionFactory {
             factory.setVirtualHost(rabbitConfig.getVirtualHost());
             factory.setAutomaticRecoveryEnabled(true);
             factory.setConnectionTimeout(CONNECTION_TIMEOUT);
+            factory.setChannelRpcTimeout(CHANNEL_RPC_TIMEOUT);
 
             factory.setHeartbeatExecutor(ScheduledExecutorHelper.newScheduledThreadPool(3, "rabbitmq-heartbeat-thread"));
             connFactoryMapping.put(cluster,factory);
