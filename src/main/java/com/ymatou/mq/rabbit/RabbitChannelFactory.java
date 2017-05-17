@@ -8,12 +8,12 @@ import com.ymatou.mq.rabbit.config.RabbitConfig;
 import com.ymatou.mq.rabbit.support.ChannelWrapper;
 import com.ymatou.mq.rabbit.support.ConnectionWrapper;
 import com.ymatou.mq.rabbit.support.RabbitConstants;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -78,20 +78,8 @@ public class RabbitChannelFactory {
      */
     static ChannelWrapper getChannelWrapperByThreadContext(String cluster, RabbitConfig rabbitConfig, ThreadLocal<ChannelWrapper> channelWrapperHolder){
         ChannelWrapper channelWrapper = channelWrapperHolder.get();
-        if(channelWrapper != null && channelWrapper.getChannel() != null){
-            //若channel状态正常
-            if(channelWrapper.getChannel().isOpen()){
-                return channelWrapper;
-            }else{
-                //若channel状态异常
-                logger.warn("channel status exception,cluster:{},channel:{}.",cluster,channelWrapper.getChannel());
-                releaseChannelWrapper(cluster,channelWrapper,true);
-                //创建新的channel
-                channelWrapper = RabbitChannelFactory.createChannelWrapper(cluster, rabbitConfig);
-                channelWrapperHolder.set(channelWrapper);
-                return channelWrapper;
-            }
-
+        if(channelWrapper != null && channelWrapper.getChannel() != null && channelWrapper.getChannel().isOpen()){
+            return channelWrapper;
         }else{
             channelWrapper = RabbitChannelFactory.createChannelWrapper(cluster, rabbitConfig);
             channelWrapperHolder.set(channelWrapper);
@@ -150,9 +138,8 @@ public class RabbitChannelFactory {
     /**
      * 释放channel wrapper
      * @param cluster
-     * @param isThreadContext
      */
-    public static void releaseChannelWrapper(String cluster, ChannelWrapper channelWrapper, boolean isThreadContext){
+    public static void releaseChannelWrapper(String cluster, ChannelWrapper channelWrapper){
         //关闭channel
         Channel channel = channelWrapper.getChannel();
         if(channel != null && channel.isOpen()){
@@ -163,20 +150,10 @@ public class RabbitChannelFactory {
             }
         }
 
-        //清除channelWrapperHolder
-        if(isThreadContext){
-            if(channel != null){
-                if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
-                    masterChannelWrapperHolder.remove();
-                }else{
-                    slaveChannelWrapperHolder.remove();
-                }
-            }
-        }
-
-        //减conn.channel计数
+        //减计数
         channelWrapper.getConnectionWrapper().decCount();
 
+        //FIXME: masterChannelWrapperHolder/slaveChannelWrapperHolder不需要清理？？
         //从channelWrapper列表移除
         if(RabbitConstants.CLUSTER_MASTER.equals(cluster)){
             masterChannelWrapperList.remove(channelWrapper);
@@ -190,9 +167,6 @@ public class RabbitChannelFactory {
         }else{
             sortConnectionWrapperList(slaveConnectionWrapperList);
         }
-
-        //清除channelWrapper
-        channelWrapper = null;
     }
 
     /**
