@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class RabbitChannelFactory {
 
-    private static final Logger logger = LoggerFactory.getLogger(RabbitChannelFactory.class);
+    private static final Logger logger = LoggerFactory.getLogger("channel");
 
     /**
      * master conn wrapper列表
@@ -81,7 +81,15 @@ public class RabbitChannelFactory {
         if(channelWrapper != null && channelWrapper.getChannel() != null && channelWrapper.getChannel().isOpen()){
             return channelWrapper;
         }else{
+            if(channelWrapper == null){
+                logger.info("create channel,thread:{},reason:channelWrapper is null.",Thread.currentThread());
+            }else if(channelWrapper.getChannel() == null){
+                logger.info("create channel,thread:{},reason:channelWrapper.channel is null.",Thread.currentThread());
+            }else if(!channelWrapper.getChannel().isOpen()){
+                logger.info("create channel,thread:{},reason:channelWrapper.channel.isOpen false,channel:{}.",Thread.currentThread(),channelWrapper.getChannel());
+            }
             channelWrapper = RabbitChannelFactory.createChannelWrapper(cluster, rabbitConfig);
+            logger.info("create channel success,thread:{},channel:{}.",Thread.currentThread(),channelWrapper.getChannel());
             channelWrapperHolder.set(channelWrapper);
             return channelWrapper;
         }
@@ -140,10 +148,12 @@ public class RabbitChannelFactory {
      * @param cluster
      */
     public static void releaseChannelWrapper(String cluster, ChannelWrapper channelWrapper){
+        logger.info("release channel,thread:{},channel:{}.",Thread.currentThread(),channelWrapper.getChannel());
         //关闭channel
         Channel channel = channelWrapper.getChannel();
         if(channel != null && channel.isOpen()){
             try {
+                logger.info("close channel,thread:{},channel:{}.",Thread.currentThread(),channelWrapper.getChannel());
                 channel.close();
             } catch (Exception e) {
                 logger.error("close channel error.",e);
