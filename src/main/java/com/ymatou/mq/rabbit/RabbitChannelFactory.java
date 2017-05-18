@@ -99,7 +99,7 @@ public class RabbitChannelFactory {
      * 创建生产通道
      * @return
      */
-    public static ChannelWrapper createChannelWrapper(String cluster, RabbitConfig rabbitConfig){
+    public static synchronized ChannelWrapper createChannelWrapper(String cluster, RabbitConfig rabbitConfig){
         try {
             //获取conn
             ConnectionWrapper connectionWrapper = getConnectionWrapper(cluster, rabbitConfig);

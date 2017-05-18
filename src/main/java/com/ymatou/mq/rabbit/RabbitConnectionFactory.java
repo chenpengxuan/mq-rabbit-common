@@ -52,7 +52,7 @@ public class RabbitConnectionFactory {
      * @param cluster 集群名称 master/slave
      * @param rabbitConfig
      */
-    public static Connection createConnection(String cluster, RabbitConfig rabbitConfig) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
+    public static synchronized Connection createConnection(String cluster, RabbitConfig rabbitConfig) throws IOException, TimeoutException, NoSuchAlgorithmException, KeyManagementException, URISyntaxException {
         //获取连接工厂
         ConnectionFactory connectionFactory = getConnectionFactory(cluster, rabbitConfig);
         //创建连接
