@@ -37,9 +37,9 @@ public class RabbitConnectionFactory {
     private static final int CONNECTION_TIMEOUT = 6000;
 
     /**
-     * 响应超时时间
+     * channel rpc超时时间
      */
-    private static final int CHANNEL_RPC_TIMEOUT = 3000;
+    private static final int CHANNEL_RPC_TIMEOUT = 10000;
 
     /**
      * 连接工厂映射表
