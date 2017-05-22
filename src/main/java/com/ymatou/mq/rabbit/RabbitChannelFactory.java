@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class RabbitChannelFactory {
 
-    private static final Logger logger = LoggerFactory.getLogger("channel");
+    private static final Logger logger = LoggerFactory.getLogger(RabbitChannelFactory.class);
 
     /**
      * master conn wrapper列表
